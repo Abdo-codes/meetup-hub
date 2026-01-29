@@ -1,5 +1,7 @@
 # Meetup Hub
 
+[![Netlify Status](https://api.netlify.com/api/v1/badges/1ccf7330-5581-47c1-b139-f99aa5b5b215/deploy-status)](https://app.netlify.com/projects/aibuilders-amsterdam/deploys)
+
 A modern, open-source community hub for tech meetups. Showcase your members, their projects, and upcoming events.
 
 ## Features
