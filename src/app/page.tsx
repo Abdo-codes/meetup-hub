@@ -1,65 +1,224 @@
+import { meetup, events } from "@/data/meetup";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { Member, Project } from "@/lib/types";
+import Link from "next/link";
 import Image from "next/image";
+import { ProjectCard } from "@/components/ProjectCard";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { Footer } from "@/components/Footer";
 
-export default function Home() {
+function formatDate(dateStr: string) {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+async function getMembers() {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { data } = await supabase
+      .from("members")
+      .select("*, projects(*)")
+      .eq("is_approved", true)
+      .order("created_at", { ascending: false });
+    return data as (Member & { projects: Project[] })[] | null;
+  } catch {
+    return null;
+  }
+}
+
+async function getTopProjects() {
+  try {
+    const supabase = await createServerSupabaseClient();
+    // Use the view that calculates monthly votes
+    const { data } = await supabase
+      .from("projects_with_monthly_votes")
+      .select("*, member:members!inner(name, slug, is_approved)")
+      .eq("member.is_approved", true)
+      .order("monthly_votes", { ascending: false })
+      .order("clicks", { ascending: false })
+      .limit(10);
+    return data as (Project & { member: { name: string; slug: string } })[] | null;
+  } catch {
+    return null;
+  }
+}
+
+export default async function Home() {
+  const members = await getMembers();
+  const topProjects = await getTopProjects();
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <main id="main-content" className="min-h-screen">
+      <div className="max-w-2xl mx-auto px-6 py-16">
+        {/* Header */}
+        <header className="mb-16">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-semibold mb-2">{meetup.name}</h1>
+              <p className="text-neutral-600 dark:text-neutral-400 text-lg mb-4">{meetup.tagline}</p>
+            </div>
+            <ThemeToggle />
+          </div>
+          <p className="text-neutral-500 leading-relaxed">{meetup.description}</p>
+
+          <div className="flex flex-wrap gap-4 mt-6">
+            <Link
+              href={meetup.links.luma}
+              target="_blank"
+              className="text-amber-600 dark:text-amber-400 hover:text-amber-500 dark:hover:text-amber-300 transition-colors font-medium"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              Join on Luma ↗
+            </Link>
+            <Link
+              href={meetup.links.twitter}
+              target="_blank"
+              className="text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors"
             >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+              Twitter
+            </Link>
+            <Link
+              href={meetup.links.discord}
+              target="_blank"
+              className="text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors"
+            >
+              Discord
+            </Link>
+            <Link
+              href={meetup.links.github}
+              target="_blank"
+              className="text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors"
+            >
+              GitHub
+            </Link>
+          </div>
+        </header>
+
+        {/* Upcoming Events */}
+        <section className="mb-16">
+          <h2 className="text-sm uppercase tracking-wider text-neutral-500 mb-6">
+            Upcoming Events
+          </h2>
+
+          <div className="space-y-3">
+            {events.map((event) => (
+              <Link
+                key={event.title + event.date}
+                href={event.lumaLink}
+                target="_blank"
+                className="block p-4 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors group"
+              >
+                <div className="flex justify-between items-start gap-4">
+                  <div>
+                    <h3 className="font-medium group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                      {event.title}
+                    </h3>
+                    <p className="text-neutral-500 text-sm mt-1">
+                      {event.location}
+                    </p>
+                  </div>
+                  <div className="text-right text-sm shrink-0">
+                    <div className="text-neutral-600 dark:text-neutral-300">{formatDate(event.date)}</div>
+                    <div className="text-neutral-500">{event.time}</div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          <Link
+            href={meetup.links.luma}
             target="_blank"
-            rel="noopener noreferrer"
+            className="inline-block mt-4 text-sm text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+            View all events on Luma →
+          </Link>
+        </section>
+
+        {/* Top Projects This Month */}
+        {topProjects && topProjects.length > 0 && (
+          <section className="mb-16">
+            <div className="flex items-baseline justify-between mb-6">
+              <h2 className="text-sm uppercase tracking-wider text-neutral-500">
+                Top Projects
+              </h2>
+              <span className="text-xs text-neutral-400 dark:text-neutral-600">
+                {new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {topProjects.map((project) => (
+                <ProjectCard key={project.id} project={project} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Members */}
+        <section>
+          <h2 className="text-sm uppercase tracking-wider text-neutral-500 mb-6">
+            Members
+          </h2>
+
+          {members && members.length > 0 ? (
+            <div className="space-y-3">
+              {members.map((member) => (
+                <Link
+                  key={member.id}
+                  href={`/m/${member.slug}`}
+                  className="flex gap-4 p-4 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors group"
+                >
+                  {member.image_url ? (
+                    <Image
+                      src={member.image_url}
+                      alt={member.name}
+                      width={48}
+                      height={48}
+                      className="w-12 h-12 rounded-full object-cover border border-neutral-200 dark:border-neutral-600"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-neutral-200 dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 flex items-center justify-center text-neutral-500 dark:text-neutral-400 font-medium">
+                      {member.name.charAt(0)}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                      {member.name}
+                      <span className="opacity-0 group-hover:opacity-100 ml-1 transition-opacity">
+                        ↗
+                      </span>
+                    </div>
+                    {member.projects && member.projects.length > 0 && (
+                      <p className="text-neutral-500 text-sm truncate">
+                        {member.projects.map((p) => p.title).join(", ")}
+                      </p>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="text-neutral-400 dark:text-neutral-500">
+              No members yet. Be the first to join!
+            </p>
+          )}
+
+          <div className="mt-8 pt-6 border-t border-neutral-200 dark:border-neutral-700">
+            <Link
+              href="/join"
+              className="inline-block px-4 py-2 bg-neutral-200 dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-300 dark:hover:bg-neutral-600 rounded-lg transition-colors text-sm"
+            >
+              Join as a member →
+            </Link>
+          </div>
+        </section>
+      </div>
+
+      <Footer />
+    </main>
   );
 }

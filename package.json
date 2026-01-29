@@ -1,6 +1,7 @@
 {
-  "name": "ai-portfolio",
-  "version": "0.1.0",
+  "name": "meetup-hub",
+  "version": "1.0.0",
+  "description": "A modern community hub for meetups - showcase members, projects, and events",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -9,11 +10,16 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.8.0",
+    "@supabase/supabase-js": "^2.93.2",
     "next": "16.1.6",
+    "next-themes": "^0.4.6",
+    "qrcode.react": "^4.2.0",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
   "devDependencies": {
+    "@netlify/plugin-nextjs": "^5.15.7",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

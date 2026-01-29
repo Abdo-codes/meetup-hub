@@ -1,36 +1,105 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Meetup Hub
 
-## Getting Started
+A modern, open-source community hub for tech meetups. Showcase your members, their projects, and upcoming events.
 
-First, run the development server:
+## Features
+
+- **Member Profiles** - Individual pages for each member with bio, social links, and projects
+- **Project Showcase** - Monthly voting system to highlight top community projects
+- **Event Listings** - Display upcoming meetups with Luma integration
+- **Dark/Light Mode** - System-aware theme switching
+- **QR Code Sharing** - Easy profile sharing for in-person events
+- **Admin Dashboard** - Approve members, manage the community
+- **SEO Optimized** - Dynamic meta tags, sitemap, Open Graph support
+- **Fully Accessible** - Keyboard navigation, screen reader support
+
+## Quick Start
+
+### 1. Clone and Install
+
+```bash
+git clone https://github.com/YOUR_USERNAME/meetup-hub.git
+cd meetup-hub
+npm install
+```
+
+### 2. Set Up Supabase
+
+1. Create a project at [supabase.com](https://supabase.com)
+2. Run the schema from `supabase-schema.sql` in the SQL editor
+3. Enable GitHub and/or Google OAuth in Authentication > Providers
+
+### 3. Configure Environment
+
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local`:
+```
+NEXT_PUBLIC_SUPABASE_URL=your-project-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+NEXT_PUBLIC_ADMIN_EMAILS=your@email.com
+NEXT_PUBLIC_SITE_URL=https://your-domain.com
+```
+
+### 4. Customize Your Meetup
+
+Edit `src/data/meetup.ts`:
+```ts
+export const meetup = {
+  name: "Your Meetup Name",
+  tagline: "Your tagline here",
+  description: "Description of your community...",
+  links: {
+    luma: "https://lu.ma/your-meetup",
+    twitter: "https://twitter.com/your-handle",
+    discord: "https://discord.gg/your-server",
+    github: "https://github.com/your-org",
+  },
+};
+
+export const events = [
+  {
+    title: "Your Event",
+    date: "2025-03-01",
+    time: "18:00",
+    location: "Your Venue",
+    lumaLink: "https://lu.ma/your-event",
+  },
+];
+```
+
+### 5. Run
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Deploy
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Netlify (Recommended)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/YOUR_USERNAME/meetup-hub)
 
-## Learn More
+Or via CLI:
+```bash
+netlify deploy --prod
+```
 
-To learn more about Next.js, take a look at the following resources:
+### Vercel
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+vercel
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Tech Stack
 
-## Deploy on Vercel
+- **Next.js 16** - React framework with App Router
+- **Supabase** - Database, Auth, and Row Level Security
+- **Tailwind CSS 4** - Styling
+- **TypeScript** - Type safety
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## License
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
