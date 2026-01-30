@@ -8,6 +8,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { PointsBadge } from "@/components/PointsBadge";
 
 export default function DashboardPage() {
   const [user, setUser] = useState<{ email: string; avatarUrl?: string } | null>(null);
@@ -15,6 +16,7 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [message, setMessage] = useState("");
 
   const [form, setForm] = useState({
@@ -58,12 +60,12 @@ export default function DashboardPage() {
       if (memberData) {
         setMember(memberData);
         setForm({
-          name: memberData.name || user.user_metadata?.full_name || user.user_metadata?.name || "",
+          name: memberData.name || "",
           slug: memberData.slug || "",
           bio: memberData.bio || "",
           image_url: memberData.image_url || oauthAvatar || "",
           twitter: memberData.twitter || "",
-          github: memberData.github || user.user_metadata?.user_name || "",
+          github: memberData.github || "",
           linkedin: memberData.linkedin || "",
           website: memberData.website || "",
         });
@@ -74,7 +76,8 @@ export default function DashboardPage() {
           .eq("member_id", memberData.id);
         setProjects(projectsData || []);
       } else {
-        // Pre-fill form for new users from OAuth metadata
+        // New user - show edit mode by default
+        setIsEditing(true);
         setForm({
           name: user.user_metadata?.full_name || user.user_metadata?.name || "",
           slug: "",
@@ -111,6 +114,7 @@ export default function DashboardPage() {
       } else {
         setMember({ ...member, ...form, slug });
         setMessage("Profile updated successfully!");
+        setIsEditing(false);
       }
     } else {
       // Create new
@@ -124,10 +128,29 @@ export default function DashboardPage() {
       } else {
         setMember(data);
         setMessage("Profile created! An admin will review and approve it shortly.");
+        setIsEditing(false);
       }
     }
 
     setIsSaving(false);
+  };
+
+  const handleCancelEdit = () => {
+    if (member) {
+      // Reset form to current member data
+      setForm({
+        name: member.name || "",
+        slug: member.slug || "",
+        bio: member.bio || "",
+        image_url: member.image_url || user?.avatarUrl || "",
+        twitter: member.twitter || "",
+        github: member.github || "",
+        linkedin: member.linkedin || "",
+        website: member.website || "",
+      });
+      setIsEditing(false);
+      setMessage("");
+    }
   };
 
   const handleAddProject = async (e: React.FormEvent) => {
@@ -152,6 +175,7 @@ export default function DashboardPage() {
   };
 
   const handleDeleteProject = async (id: string) => {
+    if (!confirm("Delete this project?")) return;
     await supabase.from("projects").delete().eq("id", id);
     setProjects(projects.filter((p) => p.id !== id));
   };
@@ -194,7 +218,9 @@ export default function DashboardPage() {
         <p className="text-neutral-500 mb-8">
           {member?.is_approved
             ? "Your profile is live!"
-            : "Your profile is pending approval."}
+            : member
+            ? "Your profile is pending approval."
+            : "Create your profile to join the community."}
         </p>
 
         {message && (
@@ -203,129 +229,233 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Profile Form */}
-        <form onSubmit={handleSaveProfile} className="space-y-4 mb-12 p-6 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl">
-          <div>
-            <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-1">Name *</label>
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-              className="w-full px-3 py-2 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none"
-            />
-          </div>
+        {/* Profile Section */}
+        {isEditing ? (
+          /* Edit Mode */
+          <form onSubmit={handleSaveProfile} className="space-y-4 mb-12 p-6 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-lg font-semibold">Edit Profile</h2>
+              {member && (
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  className="text-sm text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
 
-          <div>
-            <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-1">
-              Profile URL slug
-            </label>
-            <div className="flex items-center">
-              <span className="text-neutral-400 dark:text-neutral-500 text-sm mr-1">/m/</span>
+            <div>
+              <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-1">Name *</label>
               <input
                 type="text"
-                value={form.slug}
-                onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase().replace(/\s+/g, "-") })}
-                placeholder={form.name.toLowerCase().replace(/\s+/g, "-") || "your-name"}
-                className="flex-1 px-3 py-2 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                required
+                className="w-full px-3 py-2 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none"
               />
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-1">Bio</label>
-            <textarea
-              value={form.bio}
-              onChange={(e) => setForm({ ...form, bio: e.target.value })}
-              rows={2}
-              className="w-full px-3 py-2 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none resize-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-1">
-              Profile Image
-            </label>
-            <div className="flex items-center gap-4">
-              {form.image_url ? (
-                <Image
-                  src={form.image_url}
-                  alt="Profile preview"
-                  width={64}
-                  height={64}
-                  className="w-16 h-16 rounded-full object-cover border border-neutral-200 dark:border-neutral-600"
-                />
-              ) : (
-                <div className="w-16 h-16 rounded-full bg-neutral-200 dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 flex items-center justify-center text-neutral-500 dark:text-neutral-400 font-medium text-xl">
-                  {form.name.charAt(0).toUpperCase() || "?"}
-                </div>
-              )}
-              <div className="flex-1">
+            <div>
+              <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-1">
+                Profile URL slug
+              </label>
+              <div className="flex items-center">
+                <span className="text-neutral-400 dark:text-neutral-500 text-sm mr-1">/m/</span>
                 <input
-                  type="url"
-                  value={form.image_url}
-                  onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-                  placeholder="https://... (auto-filled from GitHub/Google)"
-                  className="w-full px-3 py-2 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none"
+                  type="text"
+                  value={form.slug}
+                  onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase().replace(/\s+/g, "-") })}
+                  placeholder={form.name.toLowerCase().replace(/\s+/g, "-") || "your-name"}
+                  className="flex-1 px-3 py-2 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none"
                 />
-                <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
-                  Uses your GitHub/Google avatar or Gravatar by default
-                </p>
               </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-1">Twitter</label>
-              <input
-                type="text"
-                value={form.twitter}
-                onChange={(e) => setForm({ ...form, twitter: e.target.value })}
-                placeholder="username"
-                className="w-full px-3 py-2 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none"
+              <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-1">Bio</label>
+              <textarea
+                value={form.bio}
+                onChange={(e) => setForm({ ...form, bio: e.target.value })}
+                rows={2}
+                className="w-full px-3 py-2 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none resize-none"
               />
             </div>
+
             <div>
-              <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-1">GitHub</label>
-              <input
-                type="text"
-                value={form.github}
-                onChange={(e) => setForm({ ...form, github: e.target.value })}
-                placeholder="username"
-                className="w-full px-3 py-2 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none"
-              />
+              <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-1">
+                Profile Image
+              </label>
+              <div className="flex items-center gap-4">
+                {form.image_url ? (
+                  <Image
+                    src={form.image_url}
+                    alt="Profile preview"
+                    width={64}
+                    height={64}
+                    className="w-16 h-16 rounded-full object-cover border border-neutral-200 dark:border-neutral-600"
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-full bg-neutral-200 dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 flex items-center justify-center text-neutral-500 dark:text-neutral-400 font-medium text-xl">
+                    {form.name.charAt(0).toUpperCase() || "?"}
+                  </div>
+                )}
+                <div className="flex-1">
+                  <input
+                    type="url"
+                    value={form.image_url}
+                    onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                    placeholder="https://... (auto-filled from GitHub/Google)"
+                    className="w-full px-3 py-2 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none"
+                  />
+                  <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
+                    Uses your GitHub/Google avatar or Gravatar by default
+                  </p>
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-1">LinkedIn</label>
-              <input
-                type="text"
-                value={form.linkedin}
-                onChange={(e) => setForm({ ...form, linkedin: e.target.value })}
-                placeholder="username"
-                className="w-full px-3 py-2 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none"
-              />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-1">Twitter</label>
+                <input
+                  type="text"
+                  value={form.twitter}
+                  onChange={(e) => setForm({ ...form, twitter: e.target.value })}
+                  placeholder="username"
+                  className="w-full px-3 py-2 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-1">GitHub</label>
+                <input
+                  type="text"
+                  value={form.github}
+                  onChange={(e) => setForm({ ...form, github: e.target.value })}
+                  placeholder="username"
+                  className="w-full px-3 py-2 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-1">LinkedIn</label>
+                <input
+                  type="text"
+                  value={form.linkedin}
+                  onChange={(e) => setForm({ ...form, linkedin: e.target.value })}
+                  placeholder="username"
+                  className="w-full px-3 py-2 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-1">Website</label>
+                <input
+                  type="url"
+                  value={form.website}
+                  onChange={(e) => setForm({ ...form, website: e.target.value })}
+                  placeholder="https://..."
+                  className="w-full px-3 py-2 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-1">Website</label>
-              <input
-                type="url"
-                value={form.website}
-                onChange={(e) => setForm({ ...form, website: e.target.value })}
-                placeholder="https://..."
-                className="w-full px-3 py-2 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none"
-              />
+
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="px-4 py-2 bg-neutral-700 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 border border-neutral-600 dark:border-neutral-300 rounded-lg hover:bg-neutral-600 dark:hover:bg-neutral-300 disabled:opacity-50 transition-colors"
+            >
+              {isSaving ? "Saving..." : member ? "Save Changes" : "Create Profile"}
+            </button>
+          </form>
+        ) : (
+          /* View Mode */
+          <div className="mb-12 p-6 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl">
+            <div className="flex items-start justify-between mb-6">
+              <div className="flex items-start gap-4">
+                {member?.image_url || user?.avatarUrl ? (
+                  <Image
+                    src={member?.image_url || user?.avatarUrl || ""}
+                    alt={member?.name || "Profile"}
+                    width={80}
+                    height={80}
+                    className="w-20 h-20 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-600"
+                  />
+                ) : (
+                  <div className="w-20 h-20 rounded-full bg-neutral-200 dark:bg-neutral-700 border-2 border-neutral-300 dark:border-neutral-600 flex items-center justify-center text-neutral-500 dark:text-neutral-400 font-medium text-2xl">
+                    {member?.name?.charAt(0).toUpperCase() || "?"}
+                  </div>
+                )}
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h2 className="text-xl font-semibold">{member?.name}</h2>
+                    {member && <PointsBadge points={member.points || 0} />}
+                  </div>
+                  <p className="text-neutral-500 text-sm">/m/{member?.slug}</p>
+                  {member?.bio && (
+                    <p className="text-neutral-600 dark:text-neutral-400 mt-2">{member.bio}</p>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setIsEditing(true)}
+                className="px-3 py-1.5 text-sm border border-neutral-200 dark:border-neutral-600 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
+              >
+                Edit
+              </button>
+            </div>
+
+            {/* Social Links */}
+            <div className="flex flex-wrap gap-2">
+              {member?.twitter && (
+                <Link
+                  href={`https://twitter.com/${member.twitter}`}
+                  target="_blank"
+                  className="px-3 py-1.5 text-sm rounded-lg border border-neutral-200 dark:border-neutral-600 bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 hover:border-neutral-300 dark:hover:border-neutral-500 transition-colors"
+                >
+                  Twitter
+                </Link>
+              )}
+              {member?.github && (
+                <Link
+                  href={`https://github.com/${member.github}`}
+                  target="_blank"
+                  className="px-3 py-1.5 text-sm rounded-lg border border-neutral-200 dark:border-neutral-600 bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 hover:border-neutral-300 dark:hover:border-neutral-500 transition-colors"
+                >
+                  GitHub
+                </Link>
+              )}
+              {member?.linkedin && (
+                <Link
+                  href={`https://linkedin.com/in/${member.linkedin}`}
+                  target="_blank"
+                  className="px-3 py-1.5 text-sm rounded-lg border border-neutral-200 dark:border-neutral-600 bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 hover:border-neutral-300 dark:hover:border-neutral-500 transition-colors"
+                >
+                  LinkedIn
+                </Link>
+              )}
+              {member?.website && (
+                <Link
+                  href={member.website}
+                  target="_blank"
+                  className="px-3 py-1.5 text-sm rounded-lg border border-neutral-200 dark:border-neutral-600 bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 hover:border-neutral-300 dark:hover:border-neutral-500 transition-colors"
+                >
+                  Website ↗
+                </Link>
+              )}
+              {!member?.twitter && !member?.github && !member?.linkedin && !member?.website && (
+                <p className="text-neutral-400 dark:text-neutral-500 text-sm">
+                  No social links added yet.{" "}
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="text-amber-600 dark:text-amber-400 hover:underline"
+                  >
+                    Add some
+                  </button>
+                </p>
+              )}
             </div>
           </div>
-
-          <button
-            type="submit"
-            disabled={isSaving}
-            className="px-4 py-2 bg-neutral-700 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 border border-neutral-600 dark:border-neutral-300 rounded-lg hover:bg-neutral-600 dark:hover:bg-neutral-300 disabled:opacity-50 transition-colors"
-          >
-            {isSaving ? "Saving..." : "Save Profile"}
-          </button>
-        </form>
+        )}
 
         {/* Projects */}
         {member ? (
@@ -362,6 +492,7 @@ export default function DashboardPage() {
             )}
 
             <form onSubmit={handleAddProject} className="space-y-3 pt-4 border-t border-neutral-200 dark:border-neutral-600">
+              <p className="text-sm text-neutral-500 mb-2">Add a new project</p>
               <div className="grid grid-cols-2 gap-3">
                 <input
                   type="text"
@@ -399,14 +530,14 @@ export default function DashboardPage() {
               </button>
             </form>
           </section>
-        ) : (
+        ) : !isEditing ? (
           <section className="p-6 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl">
             <h2 className="text-lg font-semibold mb-2">Your Projects</h2>
             <p className="text-neutral-500 text-sm">
-              Save your profile above first, then you can add your projects here.
+              Create your profile first, then you can add your projects here.
             </p>
           </section>
-        )}
+        ) : null}
       </div>
     </main>
   );
