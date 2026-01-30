@@ -143,6 +143,18 @@ export function UserBar() {
                 {displayName}
               </span>
             </Link>
+
+            {/* Logout button */}
+            <button
+              onClick={async () => {
+                await supabase.auth.signOut();
+                window.location.href = "/";
+              }}
+              className="px-2 py-1 text-xs text-neutral-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+              title="Sign out"
+            >
+              Logout
+            </button>
           </div>
         </div>
       </div>
