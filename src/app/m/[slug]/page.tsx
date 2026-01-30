@@ -8,6 +8,7 @@ import { ProjectCard } from "@/components/ProjectCard";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ShareQRCode } from "@/components/ShareQRCode";
 import { Footer } from "@/components/Footer";
+import { PointsBadge } from "@/components/PointsBadge";
 import type { Metadata } from "next";
 
 type Props = {
@@ -58,7 +59,24 @@ async function getMember(slug: string) {
     .eq("member_id", member.id)
     .order("monthly_votes", { ascending: false });
 
-  return { ...member, projects: projects || [] } as Member & { projects: Project[] };
+  // Get rank among all approved members
+  const { data: allMembers } = await supabase
+    .from("members")
+    .select("id, points")
+    .eq("is_approved", true)
+    .order("points", { ascending: false });
+
+  const rank = allMembers
+    ? allMembers.findIndex((m) => m.id === member.id) + 1
+    : 0;
+  const totalMembers = allMembers?.length || 0;
+
+  return {
+    ...member,
+    projects: projects || [],
+    rank,
+    totalMembers,
+  } as Member & { projects: Project[]; rank: number; totalMembers: number };
 }
 
 export default async function MemberPage({
@@ -100,8 +118,16 @@ export default async function MemberPage({
               height={80}
               className="w-20 h-20 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-600"
             />
-            <div>
-              <h1 className="text-2xl font-semibold">{member.name}</h1>
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-1">
+                <h1 className="text-2xl font-semibold">{member.name}</h1>
+                <PointsBadge points={member.points || 0} size="md" showLabel />
+              </div>
+              {member.rank > 0 && (
+                <p className="text-neutral-500 text-sm mb-2">
+                  Rank #{member.rank} of {member.totalMembers} members
+                </p>
+              )}
               {member.bio && (
                 <p className="text-neutral-600 dark:text-neutral-400 mt-2">{member.bio}</p>
               )}

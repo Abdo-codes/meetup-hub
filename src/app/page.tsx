@@ -7,6 +7,7 @@ import Image from "next/image";
 import { ProjectCard } from "@/components/ProjectCard";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Footer } from "@/components/Footer";
+import { PointsBadge } from "@/components/PointsBadge";
 
 function formatDate(dateStr: string) {
   const date = new Date(dateStr);
@@ -161,9 +162,17 @@ export default async function Home() {
 
         {/* Members */}
         <section>
-          <h2 className="text-sm uppercase tracking-wider text-neutral-500 mb-6">
-            Members
-          </h2>
+          <div className="flex items-baseline justify-between mb-6">
+            <h2 className="text-sm uppercase tracking-wider text-neutral-500">
+              Members
+            </h2>
+            <Link
+              href="/leaderboard"
+              className="text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+            >
+              View leaderboard →
+            </Link>
+          </div>
 
           {members && members.length > 0 ? (
             <div className="space-y-3">
@@ -181,8 +190,9 @@ export default async function Home() {
                     className="w-12 h-12 rounded-full object-cover border border-neutral-200 dark:border-neutral-600"
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                    <div className="flex items-center gap-2 font-medium group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
                       {member.name}
+                      {member.points > 0 && <PointsBadge points={member.points} />}
                       <span className="opacity-0 group-hover:opacity-100 ml-1 transition-opacity">
                         ↗
                       </span>

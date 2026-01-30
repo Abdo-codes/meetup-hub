@@ -38,5 +38,22 @@ export async function POST(
     return NextResponse.json({ error: "Vote failed" }, { status: 500 });
   }
 
+  // Award points to project owner
+  const { data: project } = await supabase
+    .from("projects")
+    .select("member_id, title")
+    .eq("id", id)
+    .single();
+
+  if (project?.member_id) {
+    await supabase.rpc("award_points", {
+      p_member_id: project.member_id,
+      p_points: 5,
+      p_reason: `Vote received on "${project.title}"`,
+      p_source: "vote",
+      p_project_id: id,
+    });
+  }
+
   return NextResponse.json({ success: true });
 }

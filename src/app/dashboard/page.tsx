@@ -109,24 +109,21 @@ export default function DashboardPage() {
       if (error) {
         setMessage("Error: " + error.message);
       } else {
-        setMessage("Profile saved!");
+        setMember({ ...member, ...form, slug });
+        setMessage("Profile updated successfully!");
       }
     } else {
       // Create new
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("members")
-        .insert({ ...form, slug, email: user!.email });
+        .insert({ ...form, slug, email: user!.email })
+        .select()
+        .single();
       if (error) {
         setMessage("Error: " + error.message);
       } else {
-        setMessage("Profile created! Awaiting approval.");
-        // Refresh member data
-        const { data } = await supabase
-          .from("members")
-          .select("*")
-          .eq("email", user!.email)
-          .single();
         setMember(data);
+        setMessage("Profile created! An admin will review and approve it shortly.");
       }
     }
 
@@ -137,15 +134,20 @@ export default function DashboardPage() {
     e.preventDefault();
     if (!member || !newProject.title || !newProject.url) return;
 
+    setMessage("");
+
     const { data, error } = await supabase
       .from("projects")
       .insert({ ...newProject, member_id: member.id })
       .select()
       .single();
 
-    if (!error && data) {
+    if (error) {
+      setMessage("Error adding project: " + error.message);
+    } else if (data) {
       setProjects([...projects, data]);
       setNewProject({ title: "", description: "", url: "" });
+      setMessage("Project added successfully!");
     }
   };
 

@@ -34,6 +34,11 @@ create policy "Public can view approved members"
   on members for select
   using (is_approved = true);
 
+-- Members can view their own profile (even if not approved)
+create policy "Members can view own profile"
+  on members for select
+  using (auth.email() = email);
+
 -- Admins can view ALL members (replace with your admin emails)
 -- To add admins: UPDATE this policy or add emails to NEXT_PUBLIC_ADMIN_EMAILS env var
 create policy "Admins can view all members"
@@ -65,6 +70,17 @@ create policy "Public can view projects of approved members"
       select 1 from members
       where members.id = projects.member_id
       and members.is_approved = true
+    )
+  );
+
+-- Members can view their own projects (even if not approved)
+create policy "Members can view own projects"
+  on projects for select
+  using (
+    exists (
+      select 1 from members
+      where members.id = projects.member_id
+      and members.email = auth.email()
     )
   );
 
@@ -175,3 +191,59 @@ select
     and pv.voted_at < date_trunc('month', now()) + interval '1 month'
   ), 0)::integer as monthly_votes
 from projects p;
+
+-- ==========================================
+-- POINTS SYSTEM
+-- ==========================================
+
+-- Add points column to members table
+alter table members add column if not exists points integer default 0;
+
+-- Point transactions table (audit trail)
+create table if not exists point_transactions (
+  id uuid default gen_random_uuid() primary key,
+  member_id uuid references members(id) on delete cascade,
+  points integer not null,
+  reason text not null,
+  source text not null, -- 'vote', 'click', 'project', 'admin', 'joined'
+  project_id uuid references projects(id) on delete set null,
+  awarded_by uuid references members(id) on delete set null, -- for admin awards
+  created_at timestamp with time zone default now()
+);
+
+-- Enable RLS on point_transactions
+alter table point_transactions enable row level security;
+
+-- Public can view all transactions
+create policy "Public can view point transactions"
+  on point_transactions for select
+  using (true);
+
+-- System can insert point transactions (via function)
+create policy "System can insert point transactions"
+  on point_transactions for insert
+  with check (true);
+
+-- Index for faster point transaction queries
+create index if not exists point_transactions_member_id_idx on point_transactions(member_id);
+create index if not exists point_transactions_created_at_idx on point_transactions(created_at);
+
+-- Function to award points to a member
+create or replace function award_points(
+  p_member_id uuid,
+  p_points integer,
+  p_reason text,
+  p_source text,
+  p_project_id uuid default null,
+  p_awarded_by uuid default null
+)
+returns void as $$
+begin
+  -- Insert transaction record
+  insert into point_transactions (member_id, points, reason, source, project_id, awarded_by)
+  values (p_member_id, p_points, p_reason, p_source, p_project_id, p_awarded_by);
+
+  -- Update member's total points
+  update members set points = points + p_points where id = p_member_id;
+end;
+$$ language plpgsql security definer;
