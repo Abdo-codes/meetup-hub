@@ -34,6 +34,29 @@ create policy "Public can view approved members"
   on members for select
   using (is_approved = true);
 
+-- Admins can view ALL members (replace with your admin emails)
+-- To add admins: UPDATE this policy or add emails to NEXT_PUBLIC_ADMIN_EMAILS env var
+create policy "Admins can view all members"
+  on members for select
+  using (
+    auth.email() = any(string_to_array(current_setting('app.admin_emails', true), ','))
+    OR auth.email() IN ('admin@example.com')  -- Add your admin email here
+  );
+
+-- Admins can update any member (for approval/revoke)
+create policy "Admins can update all members"
+  on members for update
+  using (
+    auth.email() IN ('admin@example.com')  -- Add your admin email here
+  );
+
+-- Admins can delete any member
+create policy "Admins can delete all members"
+  on members for delete
+  using (
+    auth.email() IN ('admin@example.com')  -- Add your admin email here
+  );
+
 -- Public can view projects of approved members
 create policy "Public can view projects of approved members"
   on projects for select

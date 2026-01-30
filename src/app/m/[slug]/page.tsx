@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { Member, Project } from "@/lib/types";
+import { getGravatarUrl } from "@/lib/gravatar";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -92,19 +93,13 @@ export default async function MemberPage({
         {/* Profile Header */}
         <header className="mb-12 p-6 rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800">
           <div className="flex items-start gap-6 mb-6">
-            {member.image_url ? (
-              <Image
-                src={member.image_url}
-                alt={member.name}
-                width={80}
-                height={80}
-                className="w-20 h-20 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-600"
-              />
-            ) : (
-              <div className="w-20 h-20 rounded-full bg-neutral-200 dark:bg-neutral-700 border-2 border-neutral-300 dark:border-neutral-600 flex items-center justify-center text-neutral-500 dark:text-neutral-400 text-2xl font-medium">
-                {member.name.charAt(0)}
-              </div>
-            )}
+            <Image
+              src={member.image_url || getGravatarUrl(member.email)}
+              alt={member.name}
+              width={80}
+              height={80}
+              className="w-20 h-20 rounded-full object-cover border-2 border-neutral-200 dark:border-neutral-600"
+            />
             <div>
               <h1 className="text-2xl font-semibold">{member.name}</h1>
               {member.bio && (

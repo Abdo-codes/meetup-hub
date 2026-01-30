@@ -2,13 +2,15 @@
 
 import { createClient } from "@/lib/supabase";
 import { Member, Project } from "@/lib/types";
+import { getGravatarUrl } from "@/lib/gravatar";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function DashboardPage() {
-  const [user, setUser] = useState<{ email: string } | null>(null);
+  const [user, setUser] = useState<{ email: string; avatarUrl?: string } | null>(null);
   const [member, setMember] = useState<Member | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,7 +40,13 @@ export default function DashboardPage() {
         router.push("/join");
         return;
       }
-      setUser({ email: user.email! });
+
+      // Get avatar from OAuth provider metadata (GitHub/Google)
+      const oauthAvatar = user.user_metadata?.avatar_url ||
+                          user.user_metadata?.picture ||
+                          getGravatarUrl(user.email!);
+
+      setUser({ email: user.email!, avatarUrl: oauthAvatar });
 
       // Get member profile
       const { data: memberData } = await supabase
@@ -50,22 +58,33 @@ export default function DashboardPage() {
       if (memberData) {
         setMember(memberData);
         setForm({
-          name: memberData.name || "",
+          name: memberData.name || user.user_metadata?.full_name || user.user_metadata?.name || "",
           slug: memberData.slug || "",
           bio: memberData.bio || "",
-          image_url: memberData.image_url || "",
+          image_url: memberData.image_url || oauthAvatar || "",
           twitter: memberData.twitter || "",
-          github: memberData.github || "",
+          github: memberData.github || user.user_metadata?.user_name || "",
           linkedin: memberData.linkedin || "",
           website: memberData.website || "",
         });
-
         // Get projects
         const { data: projectsData } = await supabase
           .from("projects")
           .select("*")
           .eq("member_id", memberData.id);
         setProjects(projectsData || []);
+      } else {
+        // Pre-fill form for new users from OAuth metadata
+        setForm({
+          name: user.user_metadata?.full_name || user.user_metadata?.name || "",
+          slug: "",
+          bio: "",
+          image_url: oauthAvatar || "",
+          twitter: "",
+          github: user.user_metadata?.user_name || "",
+          linkedin: "",
+          website: "",
+        });
       }
 
       setIsLoading(false);
@@ -223,15 +242,35 @@ export default function DashboardPage() {
 
           <div>
             <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-1">
-              Profile Image URL
+              Profile Image
             </label>
-            <input
-              type="url"
-              value={form.image_url}
-              onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-              placeholder="https://..."
-              className="w-full px-3 py-2 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none"
-            />
+            <div className="flex items-center gap-4">
+              {form.image_url ? (
+                <Image
+                  src={form.image_url}
+                  alt="Profile preview"
+                  width={64}
+                  height={64}
+                  className="w-16 h-16 rounded-full object-cover border border-neutral-200 dark:border-neutral-600"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-neutral-200 dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 flex items-center justify-center text-neutral-500 dark:text-neutral-400 font-medium text-xl">
+                  {form.name.charAt(0).toUpperCase() || "?"}
+                </div>
+              )}
+              <div className="flex-1">
+                <input
+                  type="url"
+                  value={form.image_url}
+                  onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                  placeholder="https://... (auto-filled from GitHub/Google)"
+                  className="w-full px-3 py-2 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none"
+                />
+                <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
+                  Uses your GitHub/Google avatar or Gravatar by default
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

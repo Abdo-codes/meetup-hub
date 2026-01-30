@@ -1,6 +1,7 @@
 import { meetup, events } from "@/data/meetup";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { Member, Project } from "@/lib/types";
+import { getGravatarUrl } from "@/lib/gravatar";
 import Link from "next/link";
 import Image from "next/image";
 import { ProjectCard } from "@/components/ProjectCard";
@@ -172,19 +173,13 @@ export default async function Home() {
                   href={`/m/${member.slug}`}
                   className="flex gap-4 p-4 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors group"
                 >
-                  {member.image_url ? (
-                    <Image
-                      src={member.image_url}
-                      alt={member.name}
-                      width={48}
-                      height={48}
-                      className="w-12 h-12 rounded-full object-cover border border-neutral-200 dark:border-neutral-600"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-full bg-neutral-200 dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 flex items-center justify-center text-neutral-500 dark:text-neutral-400 font-medium">
-                      {member.name.charAt(0)}
-                    </div>
-                  )}
+                  <Image
+                    src={member.image_url || getGravatarUrl(member.email)}
+                    alt={member.name}
+                    width={48}
+                    height={48}
+                    className="w-12 h-12 rounded-full object-cover border border-neutral-200 dark:border-neutral-600"
+                  />
                   <div className="flex-1 min-w-0">
                     <div className="font-medium group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
                       {member.name}
