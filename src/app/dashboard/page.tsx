@@ -328,7 +328,7 @@ export default function DashboardPage() {
         </form>
 
         {/* Projects */}
-        {member && (
+        {member ? (
           <section className="p-6 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl">
             <h2 className="text-lg font-semibold mb-4">Your Projects</h2>
 
@@ -398,6 +398,13 @@ export default function DashboardPage() {
                 Add Project
               </button>
             </form>
+          </section>
+        ) : (
+          <section className="p-6 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl">
+            <h2 className="text-lg font-semibold mb-2">Your Projects</h2>
+            <p className="text-neutral-500 text-sm">
+              Save your profile above first, then you can add your projects here.
+            </p>
           </section>
         )}
       </div>
