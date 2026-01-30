@@ -25,6 +25,44 @@ create table projects (
   created_at timestamp with time zone default now()
 );
 
+-- Data constraints (safe to run multiple times)
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'members_slug_format_check'
+  ) then
+    alter table members
+      add constraint members_slug_format_check
+      check (slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$');
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint where conname = 'members_bio_length_check'
+  ) then
+    alter table members
+      add constraint members_bio_length_check
+      check (bio is null or length(bio) <= 280);
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint where conname = 'projects_title_length_check'
+  ) then
+    alter table projects
+      add constraint projects_title_length_check
+      check (length(title) <= 80);
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint where conname = 'projects_description_length_check'
+  ) then
+    alter table projects
+      add constraint projects_description_length_check
+      check (description is null or length(description) <= 200);
+  end if;
+end $$;
+
+create unique index if not exists projects_member_url_idx on projects(member_id, url);
+
 -- Enable Row Level Security
 alter table members enable row level security;
 alter table projects enable row level security;

@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase";
-import { Member, Project } from "@/lib/types";
+import { Member, Project, PointTransaction } from "@/lib/types";
 import { getGravatarUrl } from "@/lib/gravatar";
 import Link from "next/link";
 import Image from "next/image";
@@ -30,6 +30,8 @@ const isValidUrl = (value: string) => {
   }
 };
 
+const MAX_PROJECTS = 5;
+
 export default function DashboardPage() {
   const [user, setUser] = useState<{ email: string; avatarUrl?: string } | null>(null);
   const [member, setMember] = useState<Member | null>(null);
@@ -38,6 +40,7 @@ export default function DashboardPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [message, setMessage] = useState("");
+  const [transactions, setTransactions] = useState<PointTransaction[]>([]);
 
   const [form, setForm] = useState({
     name: "",
@@ -95,6 +98,14 @@ export default function DashboardPage() {
           .select("*")
           .eq("member_id", memberData.id);
         setProjects(projectsData || []);
+
+        const { data: transactionsData } = await supabase
+          .from("point_transactions")
+          .select("*")
+          .eq("member_id", memberData.id)
+          .order("created_at", { ascending: false })
+          .limit(20);
+        setTransactions(transactionsData || []);
       } else {
         // New user - show edit mode by default
         setIsEditing(true);
@@ -225,6 +236,11 @@ export default function DashboardPage() {
     e.preventDefault();
     if (!member || !newProject.title || !newProject.url) return;
 
+    if (projects.length >= MAX_PROJECTS) {
+      setMessage(`You can only add up to ${MAX_PROJECTS} projects.`);
+      return;
+    }
+
     if (newProject.title.trim().length < 3) {
       setMessage("Project title is too short.");
       return;
@@ -235,11 +251,17 @@ export default function DashboardPage() {
       return;
     }
 
+    const normalizedUrl = newProject.url.trim().toLowerCase();
+    if (projects.some((project) => project.url.trim().toLowerCase() === normalizedUrl)) {
+      setMessage("You already added this project URL.");
+      return;
+    }
+
     setMessage("");
 
     const { data, error } = await supabase
       .from("projects")
-      .insert({ ...newProject, member_id: member.id })
+      .insert({ ...newProject, member_id: member.id, url: newProject.url.trim() })
       .select()
       .single();
 
@@ -357,6 +379,7 @@ export default function DashboardPage() {
                 value={form.bio}
                 onChange={(e) => setForm({ ...form, bio: e.target.value })}
                 rows={2}
+                maxLength={280}
                 className="w-full px-3 py-2 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none resize-none"
               />
             </div>
@@ -570,7 +593,9 @@ export default function DashboardPage() {
             )}
 
             <form onSubmit={handleAddProject} className="space-y-3 pt-4 border-t border-neutral-200 dark:border-neutral-600">
-              <p className="text-sm text-neutral-500 mb-2">Add a new project</p>
+              <p className="text-sm text-neutral-500 mb-2">
+                Add a new project ({projects.length}/{MAX_PROJECTS})
+              </p>
               <div className="grid grid-cols-2 gap-3">
                 <input
                   type="text"
@@ -578,6 +603,7 @@ export default function DashboardPage() {
                   onChange={(e) =>
                     setNewProject({ ...newProject, title: e.target.value })
                   }
+                  maxLength={80}
                   placeholder="Project name"
                   className="px-3 py-2 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none"
                 />
@@ -597,16 +623,51 @@ export default function DashboardPage() {
                 onChange={(e) =>
                   setNewProject({ ...newProject, description: e.target.value })
                 }
+                maxLength={200}
                 placeholder="Short description (optional)"
                 className="w-full px-3 py-2 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none"
               />
               <button
                 type="submit"
-                className="px-4 py-2 bg-neutral-200 dark:bg-neutral-600 border border-neutral-300 dark:border-neutral-500 hover:bg-neutral-300 dark:hover:bg-neutral-500 rounded-lg transition-colors text-sm"
+                disabled={projects.length >= MAX_PROJECTS}
+                className="px-4 py-2 bg-neutral-200 dark:bg-neutral-600 border border-neutral-300 dark:border-neutral-500 hover:bg-neutral-300 dark:hover:bg-neutral-500 rounded-lg transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Add Project
               </button>
+              {projects.length >= MAX_PROJECTS && (
+                <p className="text-xs text-neutral-400 dark:text-neutral-500">
+                  You reached the maximum number of projects.
+                </p>
+              )}
             </form>
+          </section>
+
+          <section className="mt-8 p-6 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl">
+            <h2 className="text-lg font-semibold mb-4">Points History</h2>
+            {transactions.length > 0 ? (
+              <div className="space-y-3">
+                {transactions.map((tx) => (
+                  <div
+                    key={tx.id}
+                    className="flex items-start justify-between gap-4 p-3 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-xl"
+                  >
+                    <div>
+                      <div className="text-sm font-medium text-neutral-700 dark:text-neutral-100">
+                        {tx.reason}
+                      </div>
+                      <div className="text-xs text-neutral-400 dark:text-neutral-500">
+                        {new Date(tx.created_at).toLocaleString()}
+                      </div>
+                    </div>
+                    <span className={`text-sm font-semibold ${tx.points >= 0 ? "text-amber-600 dark:text-amber-400" : "text-red-500"}`}>
+                      {tx.points >= 0 ? "+" : ""}{tx.points}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-neutral-500">No point activity yet.</p>
+            )}
           </section>
         ) : !isEditing ? (
           <section className="p-6 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl">
