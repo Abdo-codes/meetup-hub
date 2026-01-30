@@ -8,6 +8,7 @@ import { ProjectCard } from "@/components/ProjectCard";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Footer } from "@/components/Footer";
 import { PointsBadge } from "@/components/PointsBadge";
+import { JoinButton } from "@/components/JoinButton";
 
 function formatDate(dateStr: string) {
   const date = new Date(dateStr);
@@ -213,12 +214,7 @@ export default async function Home() {
           )}
 
           <div className="mt-8 pt-6 border-t border-neutral-200 dark:border-neutral-700">
-            <Link
-              href="/join"
-              className="inline-block px-4 py-2 bg-neutral-200 dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-300 dark:hover:bg-neutral-600 rounded-lg transition-colors text-sm"
-            >
-              Join as a member →
-            </Link>
+            <JoinButton />
           </div>
         </section>
       </div>

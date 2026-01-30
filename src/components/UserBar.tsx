@@ -8,11 +8,14 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PointsBadge } from "./PointsBadge";
 
+const ADMIN_EMAILS = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(",") || [];
+
 export function UserBar() {
   const [member, setMember] = useState<Member | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const supabase = createClient();
 
@@ -28,6 +31,10 @@ export function UserBar() {
       }
 
       setUserEmail(user.email || null);
+
+      // Check if admin
+      const isLocalDev = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      setIsAdmin(isLocalDev || ADMIN_EMAILS.includes(user.email || ""));
 
       // Get OAuth avatar
       const oauthAvatar =
@@ -63,6 +70,7 @@ export function UserBar() {
         setMember(null);
         setUserEmail(null);
         setAvatarUrl(null);
+        setIsAdmin(false);
       }
     });
 
@@ -75,6 +83,7 @@ export function UserBar() {
   }
 
   const displayName = member?.name || userEmail.split("@")[0];
+  const profileUrl = member?.slug ? `/m/${member.slug}` : "/dashboard";
 
   return (
     <>
@@ -93,14 +102,33 @@ export function UserBar() {
           </Link>
 
           {/* Right: User info */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            {/* Admin link */}
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className="px-2 py-1 text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded transition-colors"
+              >
+                Admin
+              </Link>
+            )}
+
+            {/* Dashboard link */}
+            <Link
+              href="/dashboard"
+              className="px-2 py-1 text-xs text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
+            >
+              Dashboard
+            </Link>
+
             {/* Points */}
             {member && <PointsBadge points={member.points || 0} size="sm" />}
 
             {/* Profile link with avatar and name */}
             <Link
-              href="/dashboard"
+              href={profileUrl}
               className="flex items-center gap-2 px-2 py-1 -my-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+              title="View your profile"
             >
               {avatarUrl && (
                 <Image
