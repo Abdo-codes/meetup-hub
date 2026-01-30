@@ -26,23 +26,34 @@ export async function POST(
   const supabase = await createServerSupabaseClient();
 
   // Increment click count
-  await supabase.rpc("increment_clicks", { project_id: id });
+  const { error: clickError } = await supabase.rpc("increment_clicks", { project_id: id });
+  if (clickError) {
+    console.error("Failed to increment clicks", clickError);
+    return NextResponse.json({ error: "Click failed" }, { status: 500 });
+  }
 
   // Award point to project owner
-  const { data: project } = await supabase
+  const { data: project, error: projectError } = await supabase
     .from("projects")
     .select("member_id, title")
     .eq("id", id)
     .single();
 
+  if (projectError) {
+    console.error("Failed to load project for click award", projectError);
+  }
+
   if (project?.member_id) {
-    await supabase.rpc("award_points", {
+    const { error: awardError } = await supabase.rpc("award_points", {
       p_member_id: project.member_id,
       p_points: 1,
       p_reason: `Click on "${project.title}"`,
       p_source: "click",
       p_project_id: id,
     });
+    if (awardError) {
+      console.error("Failed to award click points", awardError);
+    }
   }
 
   return NextResponse.json({ success: true });

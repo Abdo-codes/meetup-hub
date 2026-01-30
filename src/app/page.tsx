@@ -29,7 +29,8 @@ async function getMembers() {
       .order("created_at", { ascending: false })
       .limit(50);
     return data as (Member & { projects: Project[] })[] | null;
-  } catch {
+  } catch (error) {
+    console.error("Failed to load members", error);
     return null;
   }
 }
@@ -46,7 +47,8 @@ async function getTopProjects() {
       .order("clicks", { ascending: false })
       .limit(10);
     return data as (Project & { member: { name: string; slug: string } })[] | null;
-  } catch {
+  } catch (error) {
+    console.error("Failed to load top projects", error);
     return null;
   }
 }

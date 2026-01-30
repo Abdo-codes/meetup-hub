@@ -51,6 +51,7 @@ export async function POST(request: Request) {
   });
 
   if (error) {
+    console.error("Failed to award admin points", error);
     return NextResponse.json(
       { error: "Failed to award points" },
       { status: 500 }

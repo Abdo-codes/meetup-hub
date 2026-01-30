@@ -43,29 +43,37 @@ export async function POST(
   }
 
   // Add vote record (voted_at is set automatically by database)
-  const { error } = await supabase
+  const { error: insertError } = await supabase
     .from("project_votes")
     .insert({ project_id: id, voter_ip: ip });
 
-  if (error) {
+  if (insertError) {
+    console.error("Vote insert failed", insertError);
     return NextResponse.json({ error: "Vote failed" }, { status: 500 });
   }
 
   // Award points to project owner
-  const { data: project } = await supabase
+  const { data: project, error: projectError } = await supabase
     .from("projects")
     .select("member_id, title")
     .eq("id", id)
     .single();
 
+  if (projectError) {
+    console.error("Failed to load project for vote award", projectError);
+  }
+
   if (project?.member_id) {
-    await supabase.rpc("award_points", {
+    const { error: awardError } = await supabase.rpc("award_points", {
       p_member_id: project.member_id,
       p_points: 5,
       p_reason: `Vote received on "${project.title}"`,
       p_source: "vote",
       p_project_id: id,
     });
+    if (awardError) {
+      console.error("Failed to award vote points", awardError);
+    }
   }
 
   return NextResponse.json({ success: true });

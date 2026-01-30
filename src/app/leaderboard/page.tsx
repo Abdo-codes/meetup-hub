@@ -23,7 +23,8 @@ async function getLeaderboard() {
       .order("points", { ascending: false })
       .limit(100);
     return data as (Member & { projects: Pick<Project, "id" | "title" | "clicks">[] })[] | null;
-  } catch {
+  } catch (error) {
+    console.error("Failed to load leaderboard", error);
     return null;
   }
 }
