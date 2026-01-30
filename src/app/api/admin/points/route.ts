@@ -1,7 +1,10 @@
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
-const ADMIN_EMAILS = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(",") || [];
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || process.env.NEXT_PUBLIC_ADMIN_EMAILS || "")
+  .split(",")
+  .map((email) => email.trim())
+  .filter(Boolean);
 
 export async function POST(request: Request) {
   const supabase = await createServerSupabaseClient();
@@ -11,10 +14,9 @@ export async function POST(request: Request) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Allow localhost bypass for development
-  const isLocalDev = request.headers.get("host")?.includes("localhost");
+  const isDev = process.env.NODE_ENV === "development";
 
-  if (!isLocalDev && (!user || !ADMIN_EMAILS.includes(user.email!))) {
+  if (!isDev && (!user || !ADMIN_EMAILS.includes(user.email!))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
