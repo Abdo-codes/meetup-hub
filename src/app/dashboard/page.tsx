@@ -560,6 +560,7 @@ export default function DashboardPage() {
 
         {/* Projects */}
         {member ? (
+          <>
           <section className="p-6 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl">
             <h2 className="text-lg font-semibold mb-4">Your Projects</h2>
 
@@ -677,6 +678,7 @@ export default function DashboardPage() {
               <p className="text-sm text-neutral-500">No point activity yet.</p>
             )}
           </section>
+          </>
         ) : !isEditing ? (
           <section className="p-6 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl">
             <h2 className="text-lg font-semibold mb-2">Your Projects</h2>
