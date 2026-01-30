@@ -26,7 +26,8 @@ async function getMembers() {
       .from("members")
       .select("id, name, slug, bio, image_url, points, created_at, projects(id, title, url, description, clicks, created_at)")
       .eq("is_approved", true)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(50);
     return data as (Member & { projects: Project[] })[] | null;
   } catch {
     return null;
@@ -210,6 +211,12 @@ export default async function Home() {
           ) : (
             <p className="text-neutral-400 dark:text-neutral-500">
               No members yet. Be the first to join!
+            </p>
+          )}
+
+          {members && members.length >= 50 && (
+            <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-3">
+              Showing the latest 50 members. View more via the leaderboard.
             </p>
           )}
 

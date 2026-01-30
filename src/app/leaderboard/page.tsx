@@ -20,7 +20,8 @@ async function getLeaderboard() {
       .from("members")
       .select("id, name, slug, image_url, points, projects(id, title, clicks)")
       .eq("is_approved", true)
-      .order("points", { ascending: false });
+      .order("points", { ascending: false })
+      .limit(100);
     return data as (Member & { projects: Pick<Project, "id" | "title" | "clicks">[] })[] | null;
   } catch {
     return null;
