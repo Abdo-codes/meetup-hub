@@ -176,19 +176,23 @@ export default async function MemberPage({
         </header>
 
         {/* Projects */}
-        {member.projects && member.projects.length > 0 && (
-          <section>
-            <h2 className="text-sm uppercase tracking-wider text-neutral-500 mb-6">
-              Projects
-            </h2>
+        <section>
+          <h2 className="text-sm uppercase tracking-wider text-neutral-500 mb-6">
+            Projects
+          </h2>
 
+          {member.projects && member.projects.length > 0 ? (
             <div className="space-y-3">
               {member.projects.map((project) => (
                 <ProjectCard key={project.id} project={project} />
               ))}
             </div>
-          </section>
-        )}
+          ) : (
+            <p className="text-neutral-400 dark:text-neutral-500 text-sm">
+              No projects yet.
+            </p>
+          )}
+        </section>
       </div>
 
       <Footer />

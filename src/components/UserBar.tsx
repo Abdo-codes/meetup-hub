@@ -54,6 +54,13 @@ export function UserBar() {
         setMember(memberData);
         if (memberData.image_url) {
           setAvatarUrl(memberData.image_url);
+        } else if (oauthAvatar && !oauthAvatar.includes("gravatar")) {
+          // Sync OAuth avatar to member profile if they don't have one
+          await supabase
+            .from("members")
+            .update({ image_url: oauthAvatar })
+            .eq("id", memberData.id);
+          setMember({ ...memberData, image_url: oauthAvatar });
         }
       }
 
@@ -77,9 +84,33 @@ export function UserBar() {
     return () => subscription.unsubscribe();
   }, [supabase]);
 
-  // Don't render anything while loading or if not logged in
-  if (isLoading || !userEmail) {
+  // Show login button if not logged in
+  if (isLoading) {
     return null;
+  }
+
+  if (!userEmail) {
+    return (
+      <>
+        <div className="h-12" />
+        <div className="fixed top-0 left-0 right-0 z-40 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm border-b border-neutral-200 dark:border-neutral-800">
+          <div className="max-w-4xl mx-auto px-4 h-12 flex items-center justify-between">
+            <Link
+              href="/"
+              className="text-sm font-medium text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors"
+            >
+              Amsterdam AI Builders
+            </Link>
+            <Link
+              href="/login"
+              className="px-3 py-1.5 text-sm font-medium text-neutral-700 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition-colors"
+            >
+              Login
+            </Link>
+          </div>
+        </div>
+      </>
+    );
   }
 
   const displayName = member?.name || userEmail.split("@")[0];
