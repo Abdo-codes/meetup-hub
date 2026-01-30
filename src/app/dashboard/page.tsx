@@ -10,6 +10,26 @@ import { useEffect, useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PointsBadge } from "@/components/PointsBadge";
 
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+
+const isValidSlug = (value: string) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
+
+const isValidUrl = (value: string) => {
+  if (!value) return true;
+  try {
+    const url = new URL(value.startsWith("http") ? value : `https://${value}`);
+    return Boolean(url.hostname);
+  } catch {
+    return false;
+  }
+};
+
 export default function DashboardPage() {
   const [user, setUser] = useState<{ email: string; avatarUrl?: string } | null>(null);
   const [member, setMember] = useState<Member | null>(null);
@@ -101,7 +121,55 @@ export default function DashboardPage() {
     setIsSaving(true);
     setMessage("");
 
-    const slug = form.slug || form.name.toLowerCase().replace(/\s+/g, "-");
+    const slug = slugify(form.slug || form.name);
+
+    if (!form.name.trim()) {
+      setMessage("Name is required.");
+      setIsSaving(false);
+      return;
+    }
+
+    if (!slug || !isValidSlug(slug)) {
+      setMessage("Please use a valid slug (letters, numbers, hyphens).");
+      setIsSaving(false);
+      return;
+    }
+
+    if (slug.length < 3) {
+      setMessage("Slug must be at least 3 characters.");
+      setIsSaving(false);
+      return;
+    }
+
+    if (!isValidUrl(form.website) || !isValidUrl(form.image_url)) {
+      setMessage("Please provide valid URLs for website or image.");
+      setIsSaving(false);
+      return;
+    }
+
+    if (form.twitter && !/^[A-Za-z0-9_]{1,15}$/.test(form.twitter)) {
+      setMessage("Twitter handle looks invalid.");
+      setIsSaving(false);
+      return;
+    }
+
+    if (form.github && !/^[A-Za-z0-9-]{1,39}$/.test(form.github)) {
+      setMessage("GitHub username looks invalid.");
+      setIsSaving(false);
+      return;
+    }
+
+    const { data: existingSlug } = await supabase
+      .from("members")
+      .select("id")
+      .eq("slug", slug)
+      .maybeSingle();
+
+    if (existingSlug && (!member || existingSlug.id !== member.id)) {
+      setMessage("That slug is already taken. Try another.");
+      setIsSaving(false);
+      return;
+    }
 
     if (member) {
       // Update existing
@@ -156,6 +224,16 @@ export default function DashboardPage() {
   const handleAddProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!member || !newProject.title || !newProject.url) return;
+
+    if (newProject.title.trim().length < 3) {
+      setMessage("Project title is too short.");
+      return;
+    }
+
+    if (!isValidUrl(newProject.url)) {
+      setMessage("Please provide a valid project URL.");
+      return;
+    }
 
     setMessage("");
 
