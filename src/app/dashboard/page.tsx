@@ -92,9 +92,9 @@ export default function DashboardPage() {
           linkedin: memberData.linkedin || "",
           website: memberData.website || "",
         });
-        // Get projects
+        // Get projects with monthly votes
         const { data: projectsData } = await supabase
-          .from("projects")
+          .from("projects_with_monthly_votes")
           .select("*")
           .eq("member_id", memberData.id);
         setProjects(projectsData || []);
@@ -570,7 +570,7 @@ export default function DashboardPage() {
                     key={project.id}
                     className="flex items-start justify-between p-4 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-xl"
                   >
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <div className="font-medium">{project.title}</div>
                       {project.description && (
                         <div className="text-neutral-500 text-sm">
@@ -580,10 +580,18 @@ export default function DashboardPage() {
                       <div className="text-neutral-400 dark:text-neutral-500 text-xs mt-1">
                         {project.url}
                       </div>
+                      <div className="flex gap-4 mt-2 text-xs">
+                        <span className="text-amber-600 dark:text-amber-400">
+                          {project.monthly_votes || 0} votes
+                        </span>
+                        <span className="text-neutral-500">
+                          {project.clicks || 0} clicks
+                        </span>
+                      </div>
                     </div>
                     <button
                       onClick={() => handleDeleteProject(project.id)}
-                      className="px-2 py-1 text-sm text-red-500 dark:text-red-400 border border-red-300 dark:border-red-500/50 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
+                      className="px-2 py-1 text-sm text-red-500 dark:text-red-400 border border-red-300 dark:border-red-500/50 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors shrink-0 ml-4"
                     >
                       Delete
                     </button>

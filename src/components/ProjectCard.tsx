@@ -5,9 +5,10 @@ import { useState } from "react";
 
 interface ProjectCardProps {
   project: Project & { member?: { name: string; slug: string } };
+  showClicks?: boolean;
 }
 
-export function ProjectCard({ project }: ProjectCardProps) {
+export function ProjectCard({ project, showClicks = false }: ProjectCardProps) {
   const [votes, setVotes] = useState(project.monthly_votes ?? 0);
   const [hasVoted, setHasVoted] = useState(false);
   const [isVoting, setIsVoting] = useState(false);
@@ -100,10 +101,10 @@ export function ProjectCard({ project }: ProjectCardProps) {
         )}
       </a>
 
-      {project.clicks > 0 && (
-        <span className="text-neutral-400 dark:text-neutral-500 text-xs shrink-0">
-          {project.clicks} clicks
-        </span>
+      {showClicks && (
+        <div className="flex items-center gap-3 text-xs text-neutral-400 dark:text-neutral-500 shrink-0">
+          <span>{project.clicks || 0} clicks</span>
+        </div>
       )}
     </div>
   );
