@@ -24,11 +24,13 @@ async function getMembers() {
     const supabase = await createServerSupabaseClient();
     const { data } = await supabase
       .from("members")
-      .select("*, projects(*)")
+      .select("id, name, slug, bio, image_url, points, created_at, projects(id, title, url, description, clicks, created_at)")
       .eq("is_approved", true)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(50);
     return data as (Member & { projects: Project[] })[] | null;
-  } catch {
+  } catch (error) {
+    console.error("Failed to load members", error);
     return null;
   }
 }
@@ -45,7 +47,8 @@ async function getTopProjects() {
       .order("clicks", { ascending: false })
       .limit(10);
     return data as (Project & { member: { name: string; slug: string } })[] | null;
-  } catch {
+  } catch (error) {
+    console.error("Failed to load top projects", error);
     return null;
   }
 }
@@ -184,7 +187,7 @@ export default async function Home() {
                   className="flex gap-4 p-4 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors group"
                 >
                   <Image
-                    src={member.image_url || getGravatarUrl(member.email)}
+                    src={member.image_url || (member.email ? getGravatarUrl(member.email) : "/avatar-placeholder.svg")}
                     alt={member.name}
                     width={48}
                     height={48}
@@ -210,6 +213,12 @@ export default async function Home() {
           ) : (
             <p className="text-neutral-400 dark:text-neutral-500">
               No members yet. Be the first to join!
+            </p>
+          )}
+
+          {members && members.length >= 50 && (
+            <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-3">
+              Showing the latest 50 members. View more via the leaderboard.
             </p>
           )}
 

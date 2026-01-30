@@ -45,7 +45,7 @@ async function getMember(slug: string) {
   // Get member info
   const { data: member } = await supabase
     .from("members")
-    .select("*")
+    .select("id, name, slug, bio, image_url, twitter, github, linkedin, website, points")
     .eq("slug", slug)
     .eq("is_approved", true)
     .single();
@@ -112,7 +112,7 @@ export default async function MemberPage({
         <header className="mb-12 p-6 rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800">
           <div className="flex items-start gap-6 mb-6">
             <Image
-              src={member.image_url || getGravatarUrl(member.email)}
+              src={member.image_url || (member.email ? getGravatarUrl(member.email) : "/avatar-placeholder.svg")}
               alt={member.name}
               width={80}
               height={80}

@@ -8,7 +8,7 @@ export interface Member {
   github?: string;
   linkedin?: string;
   website?: string;
-  email: string;
+  email?: string;
   is_approved: boolean;
   points: number;
   created_at: string;
