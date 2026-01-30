@@ -18,11 +18,13 @@ async function getLeaderboard() {
     const supabase = await createServerSupabaseClient();
     const { data } = await supabase
       .from("members")
-      .select("*, projects(id, title, clicks)")
+      .select("id, name, slug, image_url, points, projects(id, title, clicks)")
       .eq("is_approved", true)
-      .order("points", { ascending: false });
+      .order("points", { ascending: false })
+      .limit(100);
     return data as (Member & { projects: Pick<Project, "id" | "title" | "clicks">[] })[] | null;
-  } catch {
+  } catch (error) {
+    console.error("Failed to load leaderboard", error);
     return null;
   }
 }
@@ -108,7 +110,7 @@ export default async function LeaderboardPage() {
 
                   {/* Avatar */}
                   <Image
-                    src={member.image_url || getGravatarUrl(member.email)}
+                    src={member.image_url || (member.email ? getGravatarUrl(member.email) : "/avatar-placeholder.svg")}
                     alt={member.name}
                     width={48}
                     height={48}
