@@ -15,6 +15,10 @@ Let the community upvote projects and track interest.
 - Vote: 5/min per IP+project
 - Click: 20/min per IP+project
 
+## Captcha
+- Voting uses Cloudflare Turnstile (free)
+- Requires `NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY`
+
 ## Notes / pitfalls
-- IP-based voting is spoofable; add captcha or per-user voting for stronger integrity
+- IP-based voting is still spoofable; add per-user voting for stronger integrity
 - Consider caching click increments if traffic grows

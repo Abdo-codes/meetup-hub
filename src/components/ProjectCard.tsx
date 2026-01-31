@@ -2,6 +2,7 @@
 
 import { Project } from "@/lib/types";
 import { useState } from "react";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
 
 interface ProjectCardProps {
   project: Project & { member?: { name: string; slug: string } };
@@ -13,6 +14,8 @@ export function ProjectCard({ project, showClicks = false }: ProjectCardProps) {
   const [hasVoted, setHasVoted] = useState(false);
   const [isVoting, setIsVoting] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [showCaptcha, setShowCaptcha] = useState(false);
 
   const handleClick = async () => {
     // Track click in background
@@ -25,10 +28,17 @@ export function ProjectCard({ project, showClicks = false }: ProjectCardProps) {
 
     if (hasVoted || isVoting) return;
 
+    if (!captchaToken) {
+      setShowCaptcha(true);
+      return;
+    }
+
     setIsVoting(true);
     try {
       const res = await fetch(`/api/projects/${project.id}/vote`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ turnstileToken: captchaToken }),
       });
 
       if (res.ok) {
@@ -104,6 +114,18 @@ export function ProjectCard({ project, showClicks = false }: ProjectCardProps) {
       {showClicks && (
         <div className="flex items-center gap-3 text-xs text-neutral-400 dark:text-neutral-500 shrink-0">
           <span>{project.clicks || 0} clicks</span>
+        </div>
+      )}
+
+      {showCaptcha && !hasVoted && (
+        <div className="ml-2">
+          <TurnstileWidget
+            onVerify={(token) => {
+              setCaptchaToken(token);
+              setShowCaptcha(false);
+            }}
+            onError={() => setShowCaptcha(false)}
+          />
         </div>
       )}
     </div>

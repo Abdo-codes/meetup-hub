@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { verifyTurnstile } from "@/lib/turnstile";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 
@@ -14,6 +15,13 @@ export async function POST(
     headersList.get("x-real-ip") ||
     headersList.get("cf-connecting-ip") ||
     "unknown";
+
+  const { turnstileToken } = await request.json();
+
+  const turnstile = await verifyTurnstile(turnstileToken, ip);
+  if (!turnstile.ok) {
+    return NextResponse.json({ error: "Captcha failed" }, { status: 400 });
+  }
 
   const rateLimit = checkRateLimit(`vote:${id}:${ip}`, 5, 60_000);
   if (!rateLimit.ok) {
