@@ -92,6 +92,8 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "pending" | "approved">("all");
   const [awardingMember, setAwardingMember] = useState<Member | null>(null);
+  const [rejectingMember, setRejectingMember] = useState<Member | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
 
   const router = useRouter();
   const supabase = createClient();
@@ -125,16 +127,18 @@ export default function AdminPage() {
   }, [router, supabase]);
 
   const handleApprove = async (id: string) => {
-    await supabase.from("members").update({ is_approved: true }).eq("id", id);
+    await supabase.from("members").update({ is_approved: true, status: "approved", reviewed_at: new Date().toISOString() }).eq("id", id);
+    await supabase.from("member_moderation_logs").insert({ member_id: id, action: "approved", actor_email: user?.email });
     setMembers(
-      members.map((m) => (m.id === id ? { ...m, is_approved: true } : m))
+      members.map((m) => (m.id === id ? { ...m, is_approved: true, status: "approved" } : m))
     );
   };
 
   const handleRevoke = async (id: string) => {
-    await supabase.from("members").update({ is_approved: false }).eq("id", id);
+    await supabase.from("members").update({ is_approved: false, status: "revoked", reviewed_at: new Date().toISOString() }).eq("id", id);
+    await supabase.from("member_moderation_logs").insert({ member_id: id, action: "revoked", actor_email: user?.email });
     setMembers(
-      members.map((m) => (m.id === id ? { ...m, is_approved: false } : m))
+      members.map((m) => (m.id === id ? { ...m, is_approved: false, status: "revoked" } : m))
     );
   };
 
@@ -142,6 +146,33 @@ export default function AdminPage() {
     if (!confirm("Delete this member?")) return;
     await supabase.from("members").delete().eq("id", id);
     setMembers(members.filter((m) => m.id !== id));
+  };
+
+  const handleReject = async (memberId: string) => {
+    if (!rejectionReason.trim()) return;
+    await supabase
+      .from("members")
+      .update({
+        is_approved: false,
+        status: "rejected",
+        rejection_reason: rejectionReason.trim(),
+        reviewed_at: new Date().toISOString(),
+      })
+      .eq("id", memberId);
+
+    await supabase
+      .from("member_moderation_logs")
+      .insert({ member_id: memberId, action: "rejected", reason: rejectionReason.trim(), actor_email: user?.email });
+
+    setMembers(
+      members.map((m) =>
+        m.id === memberId
+          ? { ...m, is_approved: false, status: "rejected", rejection_reason: rejectionReason.trim() }
+          : m
+      )
+    );
+    setRejectionReason("");
+    setRejectingMember(null);
   };
 
   const handleAwardPoints = async (memberId: string, points: number, reason: string) => {
@@ -161,8 +192,9 @@ export default function AdminPage() {
   };
 
   const filteredMembers = members.filter((m) => {
-    if (filter === "pending") return !m.is_approved;
+    if (filter === "pending") return !m.is_approved && m.status !== "rejected";
     if (filter === "approved") return m.is_approved;
+    if (filter === "rejected") return m.status === "rejected";
     return true;
   });
 
@@ -195,7 +227,7 @@ export default function AdminPage() {
 
         {/* Filter */}
         <div className="flex gap-2 mb-6">
-          {(["all", "pending", "approved"] as const).map((f) => (
+          {(["all", "pending", "approved", "rejected"] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -230,6 +262,10 @@ export default function AdminPage() {
                       <span className="text-xs text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-500/20 border border-green-200 dark:border-green-500/30 px-2 py-0.5 rounded">
                         Approved
                       </span>
+                    ) : member.status === "rejected" ? (
+                      <span className="text-xs text-red-500 dark:text-red-400 bg-red-100 dark:bg-red-500/20 border border-red-200 dark:border-red-500/30 px-2 py-0.5 rounded">
+                        Rejected
+                      </span>
                     ) : (
                       <span className="text-xs text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/20 border border-amber-200 dark:border-amber-500/30 px-2 py-0.5 rounded">
                         Pending
@@ -240,6 +276,9 @@ export default function AdminPage() {
                   <div className="text-neutral-400 dark:text-neutral-500 text-xs mt-1">
                     /m/{member.slug}
                   </div>
+                  {member.status === "rejected" && member.rejection_reason && (
+                    <div className="text-xs text-red-500 mt-1">Rejected: {member.rejection_reason}</div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -257,12 +296,23 @@ export default function AdminPage() {
                       Revoke
                     </button>
                   ) : (
-                    <button
-                      onClick={() => handleApprove(member.id)}
-                      className="px-3 py-1.5 text-sm bg-green-600 hover:bg-green-500 text-white border border-green-500 rounded-lg transition-colors"
-                    >
-                      Approve
-                    </button>
+                    <>
+                      <button
+                        onClick={() => handleApprove(member.id)}
+                        className="px-3 py-1.5 text-sm bg-green-600 hover:bg-green-500 text-white border border-green-500 rounded-lg transition-colors"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => {
+                          setRejectingMember(member);
+                          setRejectionReason("");
+                        }}
+                        className="px-3 py-1.5 text-sm border border-neutral-200 dark:border-neutral-600 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
+                      >
+                        Reject
+                      </button>
+                    </>
                   )}
                   <button
                     onClick={() => handleDelete(member.id)}
@@ -295,6 +345,41 @@ export default function AdminPage() {
           onClose={() => setAwardingMember(null)}
           onAward={handleAwardPoints}
         />
+      )}
+
+      {rejectingMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6 w-full max-w-md mx-4 shadow-xl">
+            <h2 className="text-lg font-semibold mb-1">Reject member</h2>
+            <p className="text-neutral-500 text-sm mb-4">
+              Provide a reason for rejecting {rejectingMember.name}
+            </p>
+            <div className="space-y-4">
+              <input
+                type="text"
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Reason for rejection"
+                className="w-full px-3 py-2 border border-neutral-200 dark:border-neutral-600 rounded-lg bg-neutral-50 dark:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => setRejectingMember(null)}
+                  className="px-4 py-2 text-sm border border-neutral-200 dark:border-neutral-600 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleReject(rejectingMember.id)}
+                  disabled={!rejectionReason.trim()}
+                  className="px-4 py-2 text-sm bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Reject
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );
