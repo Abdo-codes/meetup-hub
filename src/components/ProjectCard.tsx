@@ -2,6 +2,7 @@
 
 import { Project } from "@/lib/types";
 import { useState } from "react";
+import { getProjectLinkLabel, getProjectLinkType } from "@/lib/project-links";
 
 interface ProjectCardProps {
   project: Project & { member?: { name: string; slug: string } };
@@ -46,6 +47,9 @@ export function ProjectCard({ project, showClicks = false }: ProjectCardProps) {
       setIsVoting(false);
     }
   };
+
+  const linkType = getProjectLinkType(project.url);
+  const linkLabel = getProjectLinkLabel(linkType);
 
   return (
     <div className="flex items-center gap-3 p-4 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors group">
@@ -94,11 +98,23 @@ export function ProjectCard({ project, showClicks = false }: ProjectCardProps) {
             {project.description}
           </p>
         )}
-        {project.member && (
-          <p className="text-neutral-400 dark:text-neutral-500 text-xs mt-0.5">
-            by {project.member.name}
-          </p>
-        )}
+        <div className="mt-1 flex items-center gap-2 text-xs">
+          <span className={`px-2 py-0.5 rounded-full border text-xs ${
+            linkType === "testflight"
+              ? "border-amber-300 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10"
+              : linkType === "appstore"
+              ? "border-blue-300 text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-500/10"
+              : linkType === "playstore"
+              ? "border-green-300 text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-500/10"
+              : "border-neutral-300 text-neutral-600 dark:text-neutral-400 bg-neutral-50 dark:bg-neutral-700"
+          }`}
+          >
+            {linkLabel}
+          </span>
+          {project.member && (
+            <span className="text-neutral-400 dark:text-neutral-500">by {project.member.name}</span>
+          )}
+        </div>
       </a>
 
       {showClicks && (
