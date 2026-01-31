@@ -34,7 +34,14 @@ export default function DashboardPage() {
     website: "",
   });
 
-  const [newProject, setNewProject] = useState({ title: "", description: "", url: "" });
+  const [newProject, setNewProject] = useState({
+    title: "",
+    description: "",
+    url: "",
+    web_url: "",
+    apple_url: "",
+    android_url: "",
+  });
 
   const router = useRouter();
   const supabase = createClient();
@@ -231,7 +238,13 @@ export default function DashboardPage() {
     }
 
     if (!isValidUrl(newProject.url)) {
-      setMessage("Please provide a valid project URL.");
+      setMessage("Please provide a valid primary project URL.");
+      return;
+    }
+
+    const extraUrls = [newProject.web_url, newProject.apple_url, newProject.android_url].filter(Boolean) as string[];
+    if (extraUrls.some((value) => !isValidUrl(value))) {
+      setMessage("Please provide valid web/apple/android links.");
       return;
     }
 
@@ -243,23 +256,24 @@ export default function DashboardPage() {
 
     setMessage("");
 
-    const res = await fetch("/api/projects", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        memberId: member.id,
-        title: newProject.title,
-        description: newProject.description,
+    const { data, error } = await supabase
+      .from("projects")
+      .insert({
+        ...newProject,
+        member_id: member.id,
         url: newProject.url.trim(),
-      }),
-    });
+        web_url: newProject.web_url?.trim() || null,
+        apple_url: newProject.apple_url?.trim() || null,
+        android_url: newProject.android_url?.trim() || null,
+      })
+      .select()
+      .single();
 
-    const data = await res.json();
-    if (!res.ok) {
-      setMessage(`Error adding project: ${data.error || "Failed"}`);
-    } else if (data.project) {
-      setProjects([...projects, data.project]);
-      setNewProject({ title: "", description: "", url: "" });
+    if (error) {
+      setMessage("Error adding project: " + error.message);
+    } else if (data) {
+      setProjects([...projects, data]);
+      setNewProject({ title: "", description: "", url: "", web_url: "", apple_url: "", android_url: "" });
       setMessage("Project added successfully!");
     }
   };
@@ -570,6 +584,15 @@ export default function DashboardPage() {
                       )}
                       <div className="text-neutral-400 dark:text-neutral-500 text-xs mt-1">
                         {project.url}
+                        {project.web_url && (
+                          <span className="ml-2">Web</span>
+                        )}
+                        {project.apple_url && (
+                          <span className="ml-2">Apple</span>
+                        )}
+                        {project.android_url && (
+                          <span className="ml-2">Android</span>
+                        )}
                       </div>
                       <div className="flex gap-4 mt-2 text-xs">
                         <span className="text-amber-600 dark:text-amber-400">
@@ -612,7 +635,36 @@ export default function DashboardPage() {
                   onChange={(e) =>
                     setNewProject({ ...newProject, url: e.target.value })
                   }
-                  placeholder="https://..."
+                  placeholder="Primary URL (required)"
+                  className="px-3 py-2 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none"
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <input
+                  type="url"
+                  value={newProject.web_url}
+                  onChange={(e) =>
+                    setNewProject({ ...newProject, web_url: e.target.value })
+                  }
+                  placeholder="Web URL"
+                  className="px-3 py-2 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none"
+                />
+                <input
+                  type="url"
+                  value={newProject.apple_url}
+                  onChange={(e) =>
+                    setNewProject({ ...newProject, apple_url: e.target.value })
+                  }
+                  placeholder="Apple URL"
+                  className="px-3 py-2 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none"
+                />
+                <input
+                  type="url"
+                  value={newProject.android_url}
+                  onChange={(e) =>
+                    setNewProject({ ...newProject, android_url: e.target.value })
+                  }
+                  placeholder="Android URL"
                   className="px-3 py-2 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none"
                 />
               </div>
