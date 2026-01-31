@@ -14,3 +14,4 @@ This folder documents the core product flows and features. Each doc is short, pr
 - [Data model & RLS](./data-model-and-rls.md)
 - [Environment config](./environment-config.md)
 - [Middleware & auth](./middleware-auth.md)
+- [Improvements & enhancements](./improvements.md)
