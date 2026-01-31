@@ -21,6 +21,9 @@ create table projects (
   title text not null,
   description text,
   url text not null,
+  web_url text,
+  apple_url text,
+  android_url text,
   clicks integer default 0,
   created_at timestamp with time zone default now()
 );
@@ -62,6 +65,9 @@ begin
 end $$;
 
 create unique index if not exists projects_member_url_idx on projects(member_id, url);
+create unique index if not exists projects_member_web_url_idx on projects(member_id, web_url);
+create unique index if not exists projects_member_apple_url_idx on projects(member_id, apple_url);
+create unique index if not exists projects_member_android_url_idx on projects(member_id, android_url);
 
 -- Enable Row Level Security
 alter table members enable row level security;
