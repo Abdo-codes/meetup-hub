@@ -3,32 +3,13 @@
 import { createClient } from "@/lib/supabase";
 import { Member, Project, PointTransaction } from "@/lib/types";
 import { getGravatarUrl } from "@/lib/gravatar";
+import { isValidGitHub, isValidSlug, isValidTwitter, isValidUrl, slugify } from "@/lib/validation";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PointsBadge } from "@/components/PointsBadge";
-
-const slugify = (value: string) =>
-  value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
-
-const isValidSlug = (value: string) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
-
-const isValidUrl = (value: string) => {
-  if (!value) return true;
-  try {
-    const url = new URL(value.startsWith("http") ? value : `https://${value}`);
-    return Boolean(url.hostname);
-  } catch {
-    return false;
-  }
-};
 
 const MAX_PROJECTS = 5;
 
@@ -158,13 +139,13 @@ export default function DashboardPage() {
       return;
     }
 
-    if (form.twitter && !/^[A-Za-z0-9_]{1,15}$/.test(form.twitter)) {
+    if (!isValidTwitter(form.twitter)) {
       setMessage("Twitter handle looks invalid.");
       setIsSaving(false);
       return;
     }
 
-    if (form.github && !/^[A-Za-z0-9-]{1,39}$/.test(form.github)) {
+    if (!isValidGitHub(form.github)) {
       setMessage("GitHub username looks invalid.");
       setIsSaving(false);
       return;
@@ -183,29 +164,32 @@ export default function DashboardPage() {
     }
 
     if (member) {
-      // Update existing
-      const { error } = await supabase
-        .from("members")
-        .update({ ...form, slug })
-        .eq("id", member.id);
-      if (error) {
-        setMessage("Error: " + error.message);
+      const res = await fetch("/api/members", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, id: member.id, slug }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setMessage(`Error: ${data.error || "Failed to update"}`);
       } else {
         setMember({ ...member, ...form, slug });
         setMessage("Profile updated successfully!");
         setIsEditing(false);
       }
     } else {
-      // Create new
-      const { data, error } = await supabase
-        .from("members")
-        .insert({ ...form, slug, email: user!.email })
-        .select()
-        .single();
-      if (error) {
-        setMessage("Error: " + error.message);
+      const res = await fetch("/api/members", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, slug }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setMessage(`Error: ${data.error || "Failed to create"}`);
       } else {
-        setMember(data);
+        setMember(data.member);
         setMessage("Profile created! An admin will review and approve it shortly.");
         setIsEditing(false);
       }
@@ -259,16 +243,22 @@ export default function DashboardPage() {
 
     setMessage("");
 
-    const { data, error } = await supabase
-      .from("projects")
-      .insert({ ...newProject, member_id: member.id, url: newProject.url.trim() })
-      .select()
-      .single();
+    const res = await fetch("/api/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        memberId: member.id,
+        title: newProject.title,
+        description: newProject.description,
+        url: newProject.url.trim(),
+      }),
+    });
 
-    if (error) {
-      setMessage("Error adding project: " + error.message);
-    } else if (data) {
-      setProjects([...projects, data]);
+    const data = await res.json();
+    if (!res.ok) {
+      setMessage(`Error adding project: ${data.error || "Failed"}`);
+    } else if (data.project) {
+      setProjects([...projects, data.project]);
       setNewProject({ title: "", description: "", url: "" });
       setMessage("Project added successfully!");
     }
