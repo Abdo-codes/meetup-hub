@@ -890,13 +890,13 @@ export default function DashboardPage() {
                     className="w-full px-3 py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none"
                   />
 
-                  <input
-                    type="text"
+                  <textarea
                     value={newProject.description}
                     onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
                     maxLength={200}
-                    placeholder="Short description"
-                    className="w-full px-3 py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none"
+                    rows={2}
+                    placeholder="About this project (optional)"
+                    className="w-full px-3 py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-600 rounded-lg focus:border-neutral-400 dark:focus:border-neutral-500 focus:outline-none resize-none"
                   />
 
                   <div className="text-xs text-neutral-400 dark:text-neutral-500 space-y-1">
