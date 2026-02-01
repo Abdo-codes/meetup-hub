@@ -102,7 +102,7 @@ export function UserBar() {
               Amsterdam AI Builders
             </Link>
             <Link
-              href="/login"
+              href="/join"
               className="px-3 py-1.5 text-sm font-medium text-neutral-700 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition-colors"
             >
               Login
