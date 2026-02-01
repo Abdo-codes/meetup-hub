@@ -25,6 +25,7 @@ create table projects (
   apple_url text,
   android_url text,
   clicks integer default 0,
+  is_archived boolean default false,
   created_at timestamp with time zone default now()
 );
 

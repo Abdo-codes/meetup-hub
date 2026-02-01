@@ -319,7 +319,7 @@ export default function DashboardPage() {
     e.preventDefault();
     if (!member || !newProject.title || !newProject.url) return;
 
-    if (projects.length >= MAX_PROJECTS) {
+    if (projects.filter(p => !p.is_archived).length >= MAX_PROJECTS) {
       setMessage(`You can only add up to ${MAX_PROJECTS} projects.`);
       return;
     }
@@ -371,9 +371,25 @@ export default function DashboardPage() {
   };
 
   const handleDeleteProject = async (id: string) => {
-    if (!confirm("Delete this project?")) return;
+    if (!confirm("Delete this project permanently?")) return;
     await supabase.from("projects").delete().eq("id", id);
     setProjects(projects.filter((p) => p.id !== id));
+  };
+
+  const handleArchiveProject = async (id: string, isArchived: boolean) => {
+    const { error } = await supabase
+      .from("projects")
+      .update({ is_archived: !isArchived })
+      .eq("id", id);
+
+    if (error) {
+      setMessage("Error updating project: " + error.message);
+    } else {
+      setProjects(projects.map((p) =>
+        p.id === id ? { ...p, is_archived: !isArchived } : p
+      ));
+      setMessage(isArchived ? "Project restored!" : "Project archived.");
+    }
   };
 
   const handleSignOut = async () => {
@@ -796,7 +812,7 @@ export default function DashboardPage() {
 
             {projects.length > 0 && (
               <div className="space-y-3 mb-6">
-                {projects.map((project) => (
+                {projects.filter(p => !p.is_archived).map((project) => (
                   <div
                     key={project.id}
                     className="flex items-start justify-between p-4 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-xl"
@@ -829,20 +845,66 @@ export default function DashboardPage() {
                         </span>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleDeleteProject(project.id)}
-                      className="px-2 py-1 text-sm text-red-500 dark:text-red-400 border border-red-300 dark:border-red-500/50 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors shrink-0 ml-4"
-                    >
-                      Delete
-                    </button>
+                    <div className="flex gap-2 shrink-0 ml-4">
+                      <button
+                        onClick={() => handleArchiveProject(project.id, false)}
+                        className="px-2 py-1 text-sm text-neutral-500 dark:text-neutral-400 border border-neutral-300 dark:border-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-600 rounded-lg transition-colors"
+                      >
+                        Archive
+                      </button>
+                      <button
+                        onClick={() => handleDeleteProject(project.id)}
+                        className="px-2 py-1 text-sm text-red-500 dark:text-red-400 border border-red-300 dark:border-red-500/50 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
 
+            {/* Archived Projects */}
+            {projects.filter(p => p.is_archived).length > 0 && (
+              <details className="mt-4">
+                <summary className="text-sm text-neutral-500 cursor-pointer hover:text-neutral-700 dark:hover:text-neutral-300">
+                  Archived projects ({projects.filter(p => p.is_archived).length})
+                </summary>
+                <div className="space-y-3 mt-3">
+                  {projects.filter(p => p.is_archived).map((project) => (
+                    <div
+                      key={project.id}
+                      className="flex items-start justify-between p-4 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl opacity-60"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium">{project.title}</div>
+                        <div className="text-neutral-400 dark:text-neutral-500 text-xs mt-1">
+                          {project.url}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 shrink-0 ml-4">
+                        <button
+                          onClick={() => handleArchiveProject(project.id, true)}
+                          className="px-2 py-1 text-sm text-amber-600 dark:text-amber-400 border border-amber-300 dark:border-amber-500/50 hover:bg-amber-50 dark:hover:bg-amber-500/10 rounded-lg transition-colors"
+                        >
+                          Restore
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProject(project.id)}
+                          className="px-2 py-1 text-sm text-red-500 dark:text-red-400 border border-red-300 dark:border-red-500/50 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+
             <div className="space-y-4 pt-4 border-t border-neutral-200 dark:border-neutral-600">
               <p className="text-sm text-neutral-500">
-                Add a new project ({projects.length}/{MAX_PROJECTS})
+                Add a new project ({projects.filter(p => !p.is_archived).length}/{MAX_PROJECTS})
               </p>
 
               {/* Smart link input */}
@@ -909,7 +971,7 @@ export default function DashboardPage() {
                   <div className="flex gap-2">
                     <button
                       type="submit"
-                      disabled={projects.length >= MAX_PROJECTS || !newProject.title}
+                      disabled={projects.filter(p => !p.is_archived).length >= MAX_PROJECTS || !newProject.title}
                       className="px-4 py-2 bg-neutral-700 dark:bg-neutral-200 text-white dark:text-neutral-800 border border-neutral-600 dark:border-neutral-300 hover:bg-neutral-600 dark:hover:bg-neutral-300 rounded-lg transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Add Project
@@ -925,7 +987,7 @@ export default function DashboardPage() {
                 </form>
               )}
 
-              {projects.length >= MAX_PROJECTS && (
+              {projects.filter(p => !p.is_archived).length >= MAX_PROJECTS && (
                 <p className="text-xs text-neutral-400 dark:text-neutral-500">
                   You reached the maximum number of projects.
                 </p>

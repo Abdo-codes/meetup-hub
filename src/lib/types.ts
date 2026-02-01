@@ -36,5 +36,6 @@ export interface Project {
   android_url?: string;
   clicks: number;
   monthly_votes?: number;
+  is_archived?: boolean;
   created_at: string;
 }
