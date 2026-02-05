@@ -11,6 +11,10 @@ create table members (
   website text,
   email text unique not null,
   is_approved boolean default false,
+  status text default 'pending',
+  rejection_reason text,
+  reviewed_at timestamp with time zone,
+  reviewed_by uuid references members(id) on delete set null,
   created_at timestamp with time zone default now()
 );
 
@@ -138,6 +142,32 @@ create policy "Users can insert own profile"
 create policy "Members can update own profile"
   on members for update
   using (auth.email() = email);
+
+-- Moderation audit log
+create table if not exists member_moderation_logs (
+  id uuid default gen_random_uuid() primary key,
+  member_id uuid references members(id) on delete cascade,
+  action text not null, -- approved/rejected/revoked
+  reason text,
+  actor_email text,
+  created_at timestamp with time zone default now()
+);
+
+alter table member_moderation_logs enable row level security;
+
+create policy "Admins can view moderation logs"
+  on member_moderation_logs for select
+  using (
+    auth.email() = any(string_to_array(current_setting('app.admin_emails', true), ','))
+    OR auth.email() IN ('admin@example.com')
+  );
+
+create policy "Admins can insert moderation logs"
+  on member_moderation_logs for insert
+  with check (
+    auth.email() = any(string_to_array(current_setting('app.admin_emails', true), ','))
+    OR auth.email() IN ('admin@example.com')
+  );
 
 -- Members can insert their own projects
 create policy "Members can insert own projects"
