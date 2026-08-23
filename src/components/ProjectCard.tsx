@@ -15,31 +15,22 @@ export function ProjectCard({ project, showClicks = false }: ProjectCardProps) {
   const [hasVoted, setHasVoted] = useState(false);
   const [isVoting, setIsVoting] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState("");
   const [showCaptcha, setShowCaptcha] = useState(false);
+  const [voteError, setVoteError] = useState("");
 
   const handleClick = async () => {
     // Track click in background
     fetch(`/api/projects/${project.id}/click`, { method: "POST" });
   };
 
-  const handleVote = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (hasVoted || isVoting) return;
-
-    if (!captchaToken) {
-      setShowCaptcha(true);
-      return;
-    }
-
+  const submitVote = async (turnstileToken: string) => {
     setIsVoting(true);
+    setVoteError("");
     try {
       const res = await fetch(`/api/projects/${project.id}/vote`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ turnstileToken: captchaToken }),
+        body: JSON.stringify({ turnstileToken }),
       });
 
       if (res.ok) {
@@ -48,14 +39,34 @@ export function ProjectCard({ project, showClicks = false }: ProjectCardProps) {
         setHasVoted(true);
         setTimeout(() => setIsAnimating(false), 300);
       } else {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         if (data.error === "Already voted") {
           setHasVoted(true);
+        } else if (res.status === 429) {
+          setVoteError("Too many vote attempts. Try again in a minute.");
+        } else if (res.status === 503) {
+          setVoteError("Verification is unavailable. Try again later.");
+        } else {
+          setVoteError("Your vote could not be submitted. Try again.");
         }
       }
+    } catch {
+      setVoteError(
+        "Your vote could not be submitted. Check your connection and try again."
+      );
     } finally {
       setIsVoting(false);
     }
+  };
+
+  const handleVote = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (hasVoted || isVoting) return;
+
+    setVoteError("");
+    setShowCaptcha(true);
   };
 
   const linkCandidates = [
@@ -73,10 +84,11 @@ export function ProjectCard({ project, showClicks = false }: ProjectCardProps) {
   const primaryLink = project.web_url || project.url;
 
   return (
-    <div className="flex items-center gap-3 p-4 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors group">
+    <div className="flex flex-wrap items-center gap-3 p-4 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors group">
       <button
         onClick={handleVote}
         disabled={hasVoted || isVoting}
+        aria-label={hasVoted ? "Vote recorded" : "Upvote this project"}
         className={`flex flex-col items-center justify-center w-12 h-12 rounded-lg border transition-all duration-200 shrink-0 ${
           isAnimating ? "scale-110" : "scale-100"
         } ${
@@ -149,15 +161,27 @@ export function ProjectCard({ project, showClicks = false }: ProjectCardProps) {
       )}
 
       {showCaptcha && !hasVoted && (
-        <div className="ml-2">
+        <div className="basis-full pt-2">
           <TurnstileWidget
             onVerify={(token) => {
-              setCaptchaToken(token);
+              setShowCaptcha(false);
+              void submitVote(token);
+            }}
+            onError={(message) => {
+              setVoteError(message);
               setShowCaptcha(false);
             }}
-            onError={() => setShowCaptcha(false)}
           />
         </div>
+      )}
+
+      {voteError && (
+        <p
+          role="alert"
+          className="basis-full text-sm text-red-600 dark:text-red-400"
+        >
+          {voteError}
+        </p>
       )}
     </div>
   );

@@ -16,18 +16,34 @@ export async function POST(
     headersList.get("cf-connecting-ip") ||
     "unknown";
 
-  const { turnstileToken } = await request.json();
-
-  const turnstile = await verifyTurnstile(turnstileToken, ip);
-  if (!turnstile.ok) {
-    return NextResponse.json({ error: "Captcha failed" }, { status: 400 });
-  }
-
   const rateLimit = checkRateLimit(`vote:${id}:${ip}`, 5, 60_000);
   if (!rateLimit.ok) {
     return NextResponse.json(
       { error: "Too many requests" },
       { status: 429, headers: { "Retry-After": String(Math.ceil((rateLimit.retryAfter || 0) / 1000)) } }
+    );
+  }
+
+  let payload: unknown;
+  try {
+    payload = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
+
+  const turnstileToken = payload && typeof payload === "object"
+    ? (payload as Record<string, unknown>).turnstileToken
+    : undefined;
+  const turnstile = await verifyTurnstile(turnstileToken, {
+    ip: ip === "unknown" ? undefined : ip,
+    expectedHostname: new URL(request.url).hostname,
+  });
+  if (!turnstile.ok) {
+    const unavailable = turnstile.error === "missing-secret" ||
+      turnstile.error === "unavailable";
+    return NextResponse.json(
+      { error: unavailable ? "Captcha unavailable" : "Captcha failed" },
+      { status: unavailable ? 503 : 400 }
     );
   }
 
