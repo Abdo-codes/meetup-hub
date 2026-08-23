@@ -26,6 +26,8 @@ end $$;
 create table if not exists member_moderation_logs (
   id uuid default gen_random_uuid() primary key,
   member_id uuid references members(id) on delete set null,
+  member_email text not null,
+  member_name text not null,
   action text not null check (action in ('approved', 'rejected', 'revoked')),
   reason text,
   actor_email text not null,
@@ -33,6 +35,19 @@ create table if not exists member_moderation_logs (
 );
 
 alter table member_moderation_logs alter column member_id drop not null;
+alter table member_moderation_logs add column if not exists member_email text;
+alter table member_moderation_logs add column if not exists member_name text;
+
+update member_moderation_logs as logs
+set member_email = coalesce(logs.member_email, members.email),
+    member_name = coalesce(logs.member_name, members.name)
+from members
+where logs.member_id = members.id
+  and (logs.member_email is null or logs.member_name is null);
+
+alter table member_moderation_logs alter column member_email set not null;
+alter table member_moderation_logs alter column member_name set not null;
+
 alter table member_moderation_logs
   drop constraint if exists member_moderation_logs_member_id_fkey;
 alter table member_moderation_logs
@@ -147,9 +162,18 @@ begin
     return null;
   end if;
 
-  insert into member_moderation_logs (member_id, action, reason, actor_email)
+  insert into member_moderation_logs (
+    member_id,
+    member_email,
+    member_name,
+    action,
+    reason,
+    actor_email
+  )
   values (
     p_member_id,
+    updated_member.email,
+    updated_member.name,
     p_action,
     case when p_action = 'rejected' then btrim(p_reason) else null end,
     lower(p_actor_email)

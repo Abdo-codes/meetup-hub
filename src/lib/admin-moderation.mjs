@@ -1,25 +1,13 @@
-export const moderationActions = ["approved", "rejected", "revoked"] as const;
-
-export type ModerationAction = (typeof moderationActions)[number];
-
-type ModerationInput = {
-  memberId: string;
-  action: ModerationAction;
-  reason: string | null;
-};
-
-type ParseResult =
-  | { ok: true; value: ModerationInput }
-  | { ok: false; error: string };
+export const moderationActions = ["approved", "rejected", "revoked"];
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_REASON_LENGTH = 500;
 
-export function isValidMemberId(memberId: string) {
+export function isValidMemberId(memberId) {
   return UUID_PATTERN.test(memberId);
 }
 
-export function parseModerationInput(memberId: string, payload: unknown): ParseResult {
+export function parseModerationInput(memberId, payload) {
   if (!isValidMemberId(memberId)) {
     return { ok: false, error: "Invalid member ID" };
   }
@@ -28,8 +16,8 @@ export function parseModerationInput(memberId: string, payload: unknown): ParseR
     return { ok: false, error: "Invalid request body" };
   }
 
-  const { action, reason } = payload as { action?: unknown; reason?: unknown };
-  if (typeof action !== "string" || !moderationActions.includes(action as ModerationAction)) {
+  const { action, reason } = payload;
+  if (typeof action !== "string" || !moderationActions.includes(action)) {
     return { ok: false, error: "Invalid moderation action" };
   }
 
@@ -49,7 +37,7 @@ export function parseModerationInput(memberId: string, payload: unknown): ParseR
     ok: true,
     value: {
       memberId,
-      action: action as ModerationAction,
+      action,
       reason: action === "rejected" ? normalizedReason : null,
     },
   };

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { isValidMemberId, parseModerationInput } from "../src/lib/admin-moderation.ts";
+import { isValidMemberId, parseModerationInput } from "../src/lib/admin-moderation.mjs";
 
 const memberId = "fd099e89-15d7-4f69-8df5-f24d0533010b";
 

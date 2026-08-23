@@ -4,7 +4,7 @@ import {
   requireAdminEmail,
   requireSameOrigin,
 } from "@/lib/admin-auth";
-import { isValidMemberId, parseModerationInput } from "@/lib/admin-moderation";
+import { isValidMemberId, parseModerationInput } from "@/lib/admin-moderation.mjs";
 import { NextResponse } from "next/server";
 
 type RouteContext = { params: Promise<{ id: string }> };

@@ -21,7 +21,17 @@ test("moderation update and audit insert share one database function", () => {
   assert.ok(functionBody);
   assert.match(functionBody, /update members/);
   assert.match(functionBody, /insert into member_moderation_logs/);
+  assert.match(functionBody, /member_email/);
+  assert.match(functionBody, /member_name/);
+  assert.match(functionBody, /updated_member\.email/);
+  assert.match(functionBody, /updated_member\.name/);
   assert.match(functionBody, /p_actor_email/);
+});
+
+test("audit records retain a member snapshot when the member is deleted", () => {
+  assert.match(migration, /member_email text not null/);
+  assert.match(migration, /member_name text not null/);
+  assert.match(migration, /on delete set null/);
 });
 
 test("public roles cannot invoke the privileged moderation function", () => {
