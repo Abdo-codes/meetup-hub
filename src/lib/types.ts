@@ -31,7 +31,11 @@ export interface Project {
   title: string;
   description?: string;
   url: string;
+  web_url?: string;
+  apple_url?: string;
+  android_url?: string;
   clicks: number;
   monthly_votes?: number;
+  is_archived?: boolean;
   created_at: string;
 }
