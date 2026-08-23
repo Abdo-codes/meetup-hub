@@ -42,13 +42,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 async function getMember(slug: string) {
   const supabase = await createServerSupabaseClient();
 
-  // Get member info
-  const { data: member } = await supabase
+  // Get current user to check if viewing own profile
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Get member info - first try approved members
+  let { data: member } = await supabase
     .from("members")
-    .select("id, name, slug, bio, image_url, twitter, github, linkedin, website, points")
+    .select("id, name, slug, bio, image_url, twitter, github, linkedin, website, points, email, is_approved")
     .eq("slug", slug)
     .eq("is_approved", true)
     .single();
+
+  // If not found and user is logged in, check if it's their own profile
+  if (!member && user?.email) {
+    const { data: ownProfile } = await supabase
+      .from("members")
+      .select("id, name, slug, bio, image_url, twitter, github, linkedin, website, points, email, is_approved")
+      .eq("slug", slug)
+      .eq("email", user.email)
+      .single();
+    member = ownProfile;
+  }
 
   if (!member) return null;
 
@@ -107,6 +121,13 @@ export default async function MemberPage({
             <ThemeToggle />
           </div>
         </div>
+
+        {/* Pending approval notice */}
+        {!member.is_approved && (
+          <div className="mb-6 p-4 rounded-xl border border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 text-sm">
+            Your profile is pending approval. Only you can see this page until an admin approves it.
+          </div>
+        )}
 
         {/* Profile Header */}
         <header className="mb-12 p-6 rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800">

@@ -21,7 +21,11 @@ create table projects (
   title text not null,
   description text,
   url text not null,
+  web_url text,
+  apple_url text,
+  android_url text,
   clicks integer default 0,
+  is_archived boolean default false,
   created_at timestamp with time zone default now()
 );
 
@@ -62,6 +66,9 @@ begin
 end $$;
 
 create unique index if not exists projects_member_url_idx on projects(member_id, url);
+create unique index if not exists projects_member_web_url_idx on projects(member_id, web_url);
+create unique index if not exists projects_member_apple_url_idx on projects(member_id, apple_url);
+create unique index if not exists projects_member_android_url_idx on projects(member_id, android_url);
 
 -- Enable Row Level Security
 alter table members enable row level security;
@@ -276,7 +283,33 @@ create or replace function award_points(
   p_awarded_by uuid default null
 )
 returns void as $$
+declare
+  daily_cap integer;
+  daily_total integer;
 begin
+  -- Caps for automated sources
+  if p_source = 'click' then
+    daily_cap := 50;
+  elsif p_source = 'vote' then
+    daily_cap := 100;
+  else
+    daily_cap := null;
+  end if;
+
+  if daily_cap is not null then
+    select coalesce(sum(points), 0)
+      into daily_total
+      from point_transactions
+     where member_id = p_member_id
+       and source = p_source
+       and created_at >= date_trunc('day', now())
+       and created_at < date_trunc('day', now()) + interval '1 day';
+
+    if daily_total + p_points > daily_cap then
+      return;
+    end if;
+  end if;
+
   -- Insert transaction record
   insert into point_transactions (member_id, points, reason, source, project_id, awarded_by)
   values (p_member_id, p_points, p_reason, p_source, p_project_id, p_awarded_by);

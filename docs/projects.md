@@ -14,7 +14,8 @@ Members can add and showcase projects with a title, URL, and optional descriptio
 ## Rules
 - Title length max 80
 - Description max 200
-- URL required and validated
+- URL required and validated (primary)
+- Optional links: web_url, apple_url, android_url
 - Max 5 projects per member (UI)
 
 ## Notes / pitfalls
