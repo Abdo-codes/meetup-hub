@@ -33,5 +33,10 @@ test("public roles cannot invoke the privileged moderation function", () => {
     migration,
     /grant execute on function moderate_member\(uuid, text, text, text\) to service_role;/
   );
-  assert.match(migration, /create trigger protect_member_moderation_fields/);
+  assert.match(
+    migration,
+    /create trigger protect_member_moderation_fields\s+before insert or update on members/
+  );
+  assert.match(migration, /tg_op = 'INSERT'/);
+  assert.match(migration, /new\.status is distinct from 'pending'/);
 });

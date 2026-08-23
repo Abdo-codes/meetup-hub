@@ -210,7 +210,18 @@ language plpgsql
 set search_path = public
 as $$
 begin
-  if auth.role() = 'authenticated' and (
+  if auth.role() = 'authenticated' and tg_op = 'INSERT' and (
+    new.is_approved is distinct from false
+    or new.status is distinct from 'pending'
+    or new.rejection_reason is not null
+    or new.reviewed_at is not null
+    or new.reviewed_by is not null
+  ) then
+    raise exception 'new members must start with pending moderation state'
+      using errcode = '42501';
+  end if;
+
+  if auth.role() = 'authenticated' and tg_op = 'UPDATE' and (
     new.is_approved is distinct from old.is_approved
     or new.status is distinct from old.status
     or new.rejection_reason is distinct from old.rejection_reason
@@ -227,7 +238,7 @@ $$;
 
 drop trigger if exists protect_member_moderation_fields on members;
 create trigger protect_member_moderation_fields
-before update on members
+before insert or update on members
 for each row execute function protect_member_moderation_fields();
 
 -- Atomically change moderation state and append its audit record. Only the
