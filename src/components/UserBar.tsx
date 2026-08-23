@@ -8,8 +8,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PointsBadge } from "./PointsBadge";
 
-const ADMIN_EMAILS = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(",") || [];
-
 export function UserBar() {
   const [member, setMember] = useState<Member | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -32,9 +30,14 @@ export function UserBar() {
 
       setUserEmail(user.email || null);
 
-      // Check if admin
-      const isLocalDev = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-      setIsAdmin(isLocalDev || ADMIN_EMAILS.includes(user.email || ""));
+      // Server-only admin configuration controls privileged navigation.
+      const adminResponse = await fetch("/api/admin/status", { cache: "no-store" });
+      if (adminResponse.ok) {
+        const adminStatus = await adminResponse.json();
+        setIsAdmin(adminStatus.isAdmin === true);
+      } else {
+        setIsAdmin(false);
+      }
 
       // Get OAuth avatar
       const oauthAvatar =

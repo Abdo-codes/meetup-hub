@@ -110,7 +110,7 @@ create policy "Members can view own profile"
   using (auth.email() = email);
 
 -- Admins can view ALL members (replace with your admin emails)
--- To add admins: UPDATE this policy or add emails to NEXT_PUBLIC_ADMIN_EMAILS env var
+-- App routes use ADMIN_EMAILS; configure app.admin_emails only for direct database access.
 create policy "Admins can view all members"
   on members for select
   using (
