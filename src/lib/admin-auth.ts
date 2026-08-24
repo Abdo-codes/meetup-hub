@@ -29,12 +29,12 @@ export async function requireAdminEmail() {
     throw new AdminAccessError("Unauthorized", 401);
   }
 
-  const email = user.email.toLowerCase();
-  if (!adminEmails().includes(email)) {
+  const normalizedEmail = user.email.toLowerCase();
+  if (!adminEmails().includes(normalizedEmail)) {
     throw new AdminAccessError("Forbidden", 403);
   }
 
-  return email;
+  return user.email;
 }
 
 export function requireSameOrigin(request: Request) {

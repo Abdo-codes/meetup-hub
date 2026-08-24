@@ -20,15 +20,22 @@ function AwardPointsModal({ member, onClose, onAward }: AwardModalProps) {
   const [points, setPoints] = useState(10);
   const [reason, setReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reason.trim()) return;
 
     setIsSubmitting(true);
-    await onAward(member.id, points, reason);
-    setIsSubmitting(false);
-    onClose();
+    setErrorMessage("");
+    try {
+      await onAward(member.id, points, reason);
+      onClose();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Unable to award points");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -51,6 +58,12 @@ function AwardPointsModal({ member, onClose, onAward }: AwardModalProps) {
               required
             />
           </div>
+
+          {errorMessage && (
+            <p role="alert" className="text-sm text-red-600 dark:text-red-300">
+              {errorMessage}
+            </p>
+          )}
 
           <div>
             <label className="block text-sm font-medium mb-1">Reason</label>
@@ -187,13 +200,16 @@ export default function AdminPage() {
       body: JSON.stringify({ memberId, points, reason }),
     });
 
-    if (response.ok) {
-      setMembers((current) =>
-        current.map((m) =>
-          m.id === memberId ? { ...m, points: (m.points || 0) + points } : m
-        )
-      );
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "Unable to award points");
     }
+
+    setMembers((current) =>
+      current.map((m) =>
+        m.id === memberId ? { ...m, points: (m.points || 0) + points } : m
+      )
+    );
   };
 
   const filteredMembers = members.filter((m) => {
