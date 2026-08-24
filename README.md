@@ -41,9 +41,12 @@ Edit `.env.local`:
 ```
 NEXT_PUBLIC_SUPABASE_URL=your-project-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-NEXT_PUBLIC_ADMIN_EMAILS=your@email.com
+ADMIN_EMAILS=your@email.com
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 NEXT_PUBLIC_SITE_URL=https://your-domain.com
 ```
+
+Keep `SUPABASE_SERVICE_ROLE_KEY` server-only. Never expose it through a `NEXT_PUBLIC_` variable.
 
 ### 4. Customize Your Meetup
 

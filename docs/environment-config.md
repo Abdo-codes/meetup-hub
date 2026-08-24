@@ -7,7 +7,8 @@
 
 ## Admin access
 - `ADMIN_EMAILS` (comma‑separated) — server‑only
-- `NEXT_PUBLIC_ADMIN_EMAILS` (legacy; avoid in prod)
+- `SUPABASE_SERVICE_ROLE_KEY` — server-only; used by authenticated admin routes
 
 ## Notes
 - `NEXT_PUBLIC_*` values are exposed to the client
+- Never prefix the Supabase service-role key with `NEXT_PUBLIC_` or expose it to browser code
