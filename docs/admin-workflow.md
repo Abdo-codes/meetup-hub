@@ -1,19 +1,20 @@
 # Admin workflow
 
 ## Purpose
-Approve members and award points.
+Approve, reject, or revoke members with an audit trail, and award points.
 
 ## UI
 - `src/app/admin/page.tsx`
 
 ## Actions
-- Approve/revoke member (`members.is_approved`)
-- Delete member
+- Approve/reject/revoke a member via `PATCH /api/admin/members/:id`
+- Delete a member via `DELETE /api/admin/members/:id`
 - Award points via `POST /api/admin/points`
 
 ## Auth
-- Admins validated by email list (`ADMIN_EMAILS`)
+- Admins are authenticated and validated server-side against `ADMIN_EMAILS`
+- Moderation changes and their audit record are committed atomically by `moderate_member`
 
 ## Notes / pitfalls
-- Avoid using public env vars for admin list
-- Consider audit log for approvals/rejections
+- Configure `SUPABASE_SERVICE_ROLE_KEY` only on the server
+- Apply `supabase/migrations/202608240001_member_moderation.sql` before deploying the admin UI

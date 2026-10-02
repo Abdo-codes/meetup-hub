@@ -10,6 +10,10 @@ export interface Member {
   website?: string;
   email?: string;
   is_approved: boolean;
+  status?: "pending" | "approved" | "rejected" | "revoked";
+  rejection_reason?: string | null;
+  reviewed_at?: string | null;
+  reviewed_by?: string | null;
   points: number;
   created_at: string;
 }
